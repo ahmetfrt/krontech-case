@@ -1,3 +1,4 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -6,6 +7,14 @@ import { PrismaService } from './prisma/prisma.service';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
+
   const prismaService = app.get(PrismaService);
   await prismaService.enableShutdownHooks(app);
 
@@ -13,6 +22,7 @@ async function bootstrap() {
     .setTitle('Krontech Case API')
     .setDescription('Admin and content management API')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
