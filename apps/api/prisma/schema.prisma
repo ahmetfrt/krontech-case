@@ -1,15 +1,366 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  ADMIN
+  EDITOR
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+}
+
+enum Locale {
+  TR
+  EN
+}
+
+enum PageType {
+  HOME
+  STANDARD
+  RESOURCES
+  CONTACT
+}
+
+enum ResourceType {
+  DATASHEET
+  CASE_STUDY
+  WHITEPAPER
+  PODCAST
+  OTHER
+}
+
+enum FormType {
+  CONTACT
+  DEMO_REQUEST
+}
+
+enum FieldType {
+  TEXT
+  EMAIL
+  TEXTAREA
+  SELECT
+  CHECKBOX
+  PHONE
+}
+
+enum PreviewEntityType {
+  PAGE
+  PRODUCT
+  BLOG_POST
+  RESOURCE
+}
+
+model Role {
+  id    String   @id @default(cuid())
+  name  RoleName @unique
+  users User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id           String @id @default(cuid())
+  name         String
+  email        String @unique
+  passwordHash String
+  roleId       String
+
+  role Role @relation(fields: [roleId], references: [id])
+
+  createdPages Page[]     @relation("PageCreatedBy")
+  updatedPages Page[]     @relation("PageUpdatedBy")
+  auditLogs    AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Page {
+  id          String        @id @default(cuid())
+  pageType    PageType
+  status      PublishStatus @default(DRAFT)
+  publishedAt DateTime?
+  scheduledAt DateTime?
+
+  createdById String?
+  updatedById String?
+
+  createdBy User? @relation("PageCreatedBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("PageUpdatedBy", fields: [updatedById], references: [id])
+
+  translations PageTranslation[]
+  blocks       PageBlock[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PageTranslation {
+  id             String  @id @default(cuid())
+  pageId         String
+  locale         Locale
+  title          String
+  slug           String  @unique
+  summary        String?
+  seoTitle       String?
+  seoDescription String?
+  ogTitle        String?
+  ogDescription  String?
+  canonicalUrl   String?
+  robotsIndex    Boolean @default(true)
+  robotsFollow   Boolean @default(true)
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pageId, locale])
+}
+
+model PageBlock {
+  id         String @id @default(cuid())
+  pageId     String
+  type       String
+  sortOrder  Int
+  configJson Json
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pageId, sortOrder])
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  productCode String        @unique
+  status      PublishStatus @default(DRAFT)
+  publishedAt DateTime?
+  scheduledAt DateTime?
+
+  heroImageId String?
+  heroImage   MediaAsset? @relation("ProductHeroImage", fields: [heroImageId], references: [id])
+
+  translations ProductTranslation[]
+  resources    ProductResource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductTranslation {
+  id               String  @id @default(cuid())
+  productId        String
+  locale           Locale
+  title            String
+  slug             String  @unique
+  shortDescription String?
+  longDescription  String?
+  seoTitle         String?
+  seoDescription   String?
+  ogTitle          String?
+  ogDescription    String?
+  canonicalUrl     String?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, locale])
+}
+
+model BlogPost {
+  id              String        @id @default(cuid())
+  status          PublishStatus @default(DRAFT)
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  featuredImageId String?
+  authorName      String?
+
+  featuredImage MediaAsset? @relation("BlogFeaturedImage", fields: [featuredImageId], references: [id])
+
+  translations BlogPostTranslation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BlogPostTranslation {
+  id             String  @id @default(cuid())
+  blogPostId     String
+  locale         Locale
+  title          String
+  slug           String  @unique
+  excerpt        String?
+  content        String?
+  seoTitle       String?
+  seoDescription String?
+  ogTitle        String?
+  ogDescription  String?
+  canonicalUrl   String?
+
+  blogPost BlogPost @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([blogPostId, locale])
+}
+
+model Resource {
+  id           String        @id @default(cuid())
+  resourceType ResourceType
+  status       PublishStatus @default(DRAFT)
+  fileId       String?
+  externalUrl  String?
+  publishedAt  DateTime?
+
+  file MediaAsset? @relation("ResourceFile", fields: [fileId], references: [id])
+
+  translations ResourceTranslation[]
+  products     ProductResource[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ResourceTranslation {
+  id             String  @id @default(cuid())
+  resourceId     String
+  locale         Locale
+  title          String
+  slug           String  @unique
+  summary        String?
+  seoTitle       String?
+  seoDescription String?
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([resourceId, locale])
+}
+
+model ProductResource {
+  productId  String
+  resourceId String
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@id([productId, resourceId])
+}
+
+model MediaAsset {
+  id         String  @id @default(cuid())
+  fileName   String
+  mimeType   String
+  storageKey String  @unique
+  altText    String?
+  width      Int?
+  height     Int?
+
+  productHeroUsages  Product[]  @relation("ProductHeroImage")
+  blogFeaturedUsages BlogPost[] @relation("BlogFeaturedImage")
+  resourceFileUsages Resource[] @relation("ResourceFile")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FormDefinition {
+  id             String   @id @default(cuid())
+  name           String
+  formType       FormType
+  isActive       Boolean  @default(true)
+  successMessage String?
+  webhookUrl     String?
+
+  fields      FormField[]
+  submissions FormSubmission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FormField {
+  id               String    @id @default(cuid())
+  formDefinitionId String
+  name             String
+  label            String
+  fieldType        FieldType
+  isRequired       Boolean   @default(false)
+  sortOrder        Int
+  optionsJson      Json?
+
+  formDefinition FormDefinition @relation(fields: [formDefinitionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formDefinitionId, sortOrder])
+}
+
+model FormSubmission {
+  id               String  @id @default(cuid())
+  formDefinitionId String
+  locale           Locale
+  payloadJson      Json
+  consentGiven     Boolean @default(false)
+
+  formDefinition FormDefinition @relation(fields: [formDefinitionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model RedirectRule {
+  id         String  @id @default(cuid())
+  sourcePath String  @unique
+  targetPath String
+  statusCode Int
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PreviewToken {
+  id         String            @id @default(cuid())
+  entityType PreviewEntityType
+  entityId   String
+  token      String            @unique
+  expiresAt  DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
+
+model AuditLog {
+  id         String  @id @default(cuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String?
+  metaJson   Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
