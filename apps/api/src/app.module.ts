@@ -9,6 +9,7 @@ import { ProductsModule } from './products/products.module';
 import { BlogModule } from './blog/blog.module';
 import { ResourcesModule } from './resources/resources.module';
 import { FormsModule } from './forms/forms.module';
+import { MediaModule } from './media/media.module';
 
 
 @Module({
@@ -25,6 +26,7 @@ import { FormsModule } from './forms/forms.module';
     BlogModule,
     ResourcesModule,
     FormsModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [],
