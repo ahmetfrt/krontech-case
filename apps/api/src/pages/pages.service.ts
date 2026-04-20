@@ -121,4 +121,30 @@ export class PagesService {
       },
     });
   }
+
+  async findPublishedByLocaleAndSlug(locale: string, slug: string) {
+    const page = await this.prisma.page.findFirst({
+      where: {
+        status: 'PUBLISHED',
+        translations: {
+          some: {
+            locale: locale as any,
+            slug,
+          },
+        },
+      },
+      include: {
+        translations: true,
+        blocks: {
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    });
+
+    if (!page) {
+      throw new NotFoundException('Published page not found');
+    }
+
+    return page;
+  }
 }
