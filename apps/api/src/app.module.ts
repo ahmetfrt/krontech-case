@@ -5,6 +5,11 @@ import { AuthModule } from './auth/auth.module';
 import { PagesModule } from './pages/pages.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
+import { ProductsModule } from './products/products.module';
+import { BlogModule } from './blog/blog.module';
+import { ResourcesModule } from './resources/resources.module';
+import { FormsModule } from './forms/forms.module';
+
 
 @Module({
   imports: [
@@ -16,6 +21,10 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     AuthModule,
     PagesModule,
+    ProductsModule,
+    BlogModule,
+    ResourcesModule,
+    FormsModule,
   ],
   controllers: [AppController],
   providers: [],
