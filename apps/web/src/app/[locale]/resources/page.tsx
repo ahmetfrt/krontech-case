@@ -1,21 +1,33 @@
 import { getPublishedResources } from '@/lib/resources';
+import { normalizeApiLocale } from '@/lib/i18n';
 
-export default async function ResourcesPage() {
-  const resources = await getPublishedResources('TR');
+export default async function ResourcesPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const apiLocale = normalizeApiLocale(locale);
+
+  const resources = await getPublishedResources(apiLocale);
 
   return (
     <main className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold">Kaynaklar</h1>
+      <h1 className="text-3xl font-bold">
+        {locale === 'tr' ? 'Kaynaklar' : 'Resources'}
+      </h1>
 
       <div className="space-y-4">
         {resources.map((resource: any) => {
-          const tr = resource.translations.find((t: any) => t.locale === 'TR');
+          const current = resource.translations.find(
+            (t: any) => t.locale === apiLocale,
+          );
 
           return (
             <article key={resource.id} className="rounded-xl border p-4">
               <div className="text-sm text-gray-500">{resource.resourceType}</div>
-              <h2 className="text-xl font-semibold">{tr?.title}</h2>
-              <p className="text-gray-600">{tr?.summary}</p>
+              <h2 className="text-xl font-semibold">{current?.title}</h2>
+              <p className="text-gray-600">{current?.summary}</p>
               {resource.externalUrl ? (
                 <a
                   href={resource.externalUrl}
@@ -23,7 +35,7 @@ export default async function ResourcesPage() {
                   rel="noreferrer"
                   className="mt-2 inline-block text-blue-600 underline"
                 >
-                  Kaynağı aç
+                  {locale === 'tr' ? 'Kaynağı aç' : 'Open resource'}
                 </a>
               ) : null}
             </article>
