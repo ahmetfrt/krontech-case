@@ -227,6 +227,7 @@ model Resource {
   fileId       String?
   externalUrl  String?
   publishedAt  DateTime?
+  scheduledAt  DateTime?
 
   file MediaAsset? @relation("ResourceFile", fields: [fileId], references: [id])
 

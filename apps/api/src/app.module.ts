@@ -10,6 +10,12 @@ import { BlogModule } from './blog/blog.module';
 import { ResourcesModule } from './resources/resources.module';
 import { FormsModule } from './forms/forms.module';
 import { MediaModule } from './media/media.module';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { PreviewModule } from './preview/preview.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { PublishingModule } from './publishing/publishing.module';
 
 
 @Module({
@@ -18,6 +24,12 @@ import { MediaModule } from './media/media.module';
       isGlobal: true,
       envFilePath: ['.env', '../../.env'],
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 20,
+      },
+]),
     PrismaModule,
     UsersModule,
     AuthModule,
@@ -27,8 +39,16 @@ import { MediaModule } from './media/media.module';
     ResourcesModule,
     FormsModule,
     MediaModule,
+    PreviewModule,
+    ScheduleModule.forRoot(),
+    PublishingModule,
   ],
   controllers: [AppController],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

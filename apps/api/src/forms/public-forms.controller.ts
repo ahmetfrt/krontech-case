@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SubmitFormDto } from './dto/submit-form.dto';
 import { FormsService } from './forms.service';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('public-forms')
 @Controller('public/forms')
@@ -14,6 +15,7 @@ export class PublicFormsController {
   }
 
   @Post(':id/submit')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   submit(@Param('id') id: string, @Body() body: SubmitFormDto) {
     return this.formsService.submit(id, body);
   }
