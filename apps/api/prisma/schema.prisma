@@ -59,6 +59,13 @@ enum PreviewEntityType {
   RESOURCE
 }
 
+enum VersionEntityType {
+  PAGE
+  PRODUCT
+  BLOG_POST
+  RESOURCE
+}
+
 model Role {
   id    String   @id @default(cuid())
   name  RoleName @unique
@@ -77,9 +84,10 @@ model User {
 
   role Role @relation(fields: [roleId], references: [id])
 
-  createdPages Page[]     @relation("PageCreatedBy")
-  updatedPages Page[]     @relation("PageUpdatedBy")
-  auditLogs    AuditLog[]
+  createdPages   Page[]           @relation("PageCreatedBy")
+  updatedPages   Page[]           @relation("PageUpdatedBy")
+  auditLogs      AuditLog[]
+  contentVersion ContentVersion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -364,4 +372,20 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+model ContentVersion {
+  id           String            @id @default(cuid())
+  entityType   VersionEntityType
+  entityId     String
+  versionNo    Int
+  snapshotJson Json
+  createdById  String?
+  note         String?
+
+  createdBy User?    @relation(fields: [createdById], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([entityType, entityId, versionNo])
+  @@index([entityType, entityId, createdAt])
 }

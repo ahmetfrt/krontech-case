@@ -17,13 +17,20 @@ export async function generateMetadata({
   const product = await getPublishedProduct(apiLocale, slug);
   const current = product.translations.find((t: any) => t.locale === apiLocale);
 
+  const trTranslation = product.translations.find((t: any) => t.locale === 'TR');
+  const enTranslation = product.translations.find((t: any) => t.locale === 'EN');
+
   return buildMetadata({
     title: current?.seoTitle || current?.title || 'Product',
     description:
       current?.seoDescription ||
       current?.shortDescription ||
       'Product detail',
-    path: `/${locale}/products/${slug}`,
+    canonicalPath: `/${locale}/products/${slug}`,
+    alternatePaths: {
+      ...(trTranslation ? { tr: `/tr/products/${trTranslation.slug}` } : {}),
+      ...(enTranslation ? { en: `/en/products/${enTranslation.slug}` } : {}),
+    },
   });
 }
 

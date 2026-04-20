@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsObject } from 'class-validator';
+import { IsBoolean, IsEnum, IsObject, IsOptional, IsString } from 'class-validator';
 import { Locale } from '@prisma/client';
 
 export class SubmitFormDto {
@@ -10,4 +10,8 @@ export class SubmitFormDto {
 
   @IsBoolean()
   consentGiven: boolean;
+
+  @IsOptional()
+  @IsString()
+  honeypot?: string;
 }

@@ -12,6 +12,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateFormDto } from './dto/create-form.dto';
 import { UpdateFormDto } from './dto/update-form.dto';
 import { FormsService } from './forms.service';
+import { Res } from '@nestjs/common';
+import type { Response } from 'express';
 
 @ApiTags('forms')
 @ApiBearerAuth()
@@ -43,5 +45,19 @@ export class FormsController {
   @Get(':id/submissions')
   getSubmissions(@Param('id') id: string) {
     return this.formsService.getSubmissions(id);
+  }
+
+
+  @Get(':id/submissions/export')
+  async exportSubmissions(@Param('id') id: string, @Res() res: Response) {
+    const csv = await this.formsService.exportSubmissionsCsv(id);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="form-${id}-submissions.csv"`,
+    );
+
+    res.send(csv);
   }
 }

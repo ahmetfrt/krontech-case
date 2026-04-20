@@ -18,7 +18,11 @@ export async function generateMetadata({
     title: current?.seoTitle || current?.title || 'Home',
     description:
       current?.seoDescription || current?.summary || 'Krontech homepage',
-    path: `/${locale}`,
+    canonicalPath: `/${locale}`,
+    alternatePaths: {
+      tr: '/tr',
+      en: '/en',
+    },
   });
 }
 

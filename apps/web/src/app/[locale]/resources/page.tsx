@@ -1,5 +1,27 @@
+import { buildMetadata } from '@/lib/seo';
 import { getPublishedResources } from '@/lib/resources';
 import { normalizeApiLocale } from '@/lib/i18n';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+
+  return buildMetadata({
+    title: locale === 'tr' ? 'Kaynaklar' : 'Resources',
+    description:
+      locale === 'tr'
+        ? 'Krontech kaynakları ve içerikleri'
+        : 'Krontech resources and content',
+    canonicalPath: `/${locale}/resources`,
+    alternatePaths: {
+      tr: '/tr/resources',
+      en: '/en/resources',
+    },
+  });
+}
 
 export default async function ResourcesPage({
   params,

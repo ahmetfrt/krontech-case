@@ -16,6 +16,7 @@ export async function submitPublicForm(formId: string, payload: {
   locale: 'TR' | 'EN';
   payloadJson: Record<string, any>;
   consentGiven: boolean;
+  honeypot?: string;
 }) {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 

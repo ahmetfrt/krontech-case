@@ -3,27 +3,52 @@ export function buildAbsoluteUrl(path: string) {
   return `${siteUrl}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
+export function buildLocalizedAlternates(pathByLocale: {
+  tr?: string;
+  en?: string;
+}) {
+  return {
+    canonical: pathByLocale.tr
+      ? buildAbsoluteUrl(pathByLocale.tr)
+      : pathByLocale.en
+        ? buildAbsoluteUrl(pathByLocale.en)
+        : buildAbsoluteUrl('/'),
+    languages: {
+      ...(pathByLocale.tr ? { 'tr-TR': buildAbsoluteUrl(pathByLocale.tr) } : {}),
+      ...(pathByLocale.en ? { 'en-US': buildAbsoluteUrl(pathByLocale.en) } : {}),
+      ...(pathByLocale.en ? { 'x-default': buildAbsoluteUrl(pathByLocale.en) } : {}),
+    },
+  };
+}
+
 export function buildMetadata({
   title,
   description,
-  path,
+  canonicalPath,
+  alternatePaths,
 }: {
   title: string;
   description: string;
-  path: string;
+  canonicalPath: string;
+  alternatePaths?: {
+    tr?: string;
+    en?: string;
+  };
 }) {
-  const url = buildAbsoluteUrl(path);
+  const canonicalUrl = buildAbsoluteUrl(canonicalPath);
 
   return {
     title,
     description,
-    alternates: {
-      canonical: url,
-    },
+    alternates: alternatePaths
+      ? buildLocalizedAlternates(alternatePaths)
+      : {
+          canonical: canonicalUrl,
+        },
     openGraph: {
       title,
       description,
-      url,
+      url: canonicalUrl,
       siteName: 'Krontech Case',
       type: 'website',
     },

@@ -17,11 +17,18 @@ export async function generateMetadata({
   const post = await getPublishedBlogPost(apiLocale, slug);
   const current = post.translations.find((t: any) => t.locale === apiLocale);
 
+  const trTranslation = post.translations.find((t: any) => t.locale === 'TR');
+  const enTranslation = post.translations.find((t: any) => t.locale === 'EN');
+
   return buildMetadata({
     title: current?.seoTitle || current?.title || 'Blog',
     description:
       current?.seoDescription || current?.excerpt || 'Blog detail',
-    path: `/${locale}/blog/${slug}`,
+    canonicalPath: `/${locale}/blog/${slug}`,
+    alternatePaths: {
+      ...(trTranslation ? { tr: `/tr/blog/${trTranslation.slug}` } : {}),
+      ...(enTranslation ? { en: `/en/blog/${enTranslation.slug}` } : {}),
+    },
   });
 }
 

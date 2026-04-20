@@ -16,6 +16,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { PreviewModule } from './preview/preview.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PublishingModule } from './publishing/publishing.module';
+import { RedirectsModule } from './redirects/redirects.module';
 
 
 @Module({
@@ -42,6 +43,7 @@ import { PublishingModule } from './publishing/publishing.module';
     PreviewModule,
     ScheduleModule.forRoot(),
     PublishingModule,
+    RedirectsModule,
   ],
   controllers: [AppController],
   providers: [

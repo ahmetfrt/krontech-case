@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateFormDto } from './dto/create-form.dto';
 import { SubmitFormDto } from './dto/submit-form.dto';
 import { UpdateFormDto } from './dto/update-form.dto';
+import { BadRequestException } from '@nestjs/common';
 
 @Injectable()
 export class FormsService {
@@ -114,7 +115,11 @@ export class FormsService {
       throw new NotFoundException('Active form not found');
     }
 
-    return this.prisma.formSubmission.create({
+    if (dto.honeypot && dto.honeypot.trim() !== '') {
+      throw new BadRequestException('Spam detected');
+    }
+
+    const submission = await this.prisma.formSubmission.create({
       data: {
         formDefinitionId: formId,
         locale: dto.locale,
@@ -122,6 +127,22 @@ export class FormsService {
         consentGiven: dto.consentGiven,
       },
     });
+
+    if (form.webhookUrl) {
+      fetch(form.webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          formId,
+          formName: form.name,
+          submission,
+        }),
+      }).catch(() => {
+        // webhook failure should not break form submission
+      });
+    }
+
+    return submission;
   }
 
   async getSubmissions(formId: string) {
@@ -154,5 +175,27 @@ export class FormsService {
     }
 
     return form;
+  }
+
+  async exportSubmissionsCsv(formId: string) {
+    const submissions = await this.getSubmissions(formId);
+
+    const headers = ['id', 'locale', 'consentGiven', 'createdAt', 'payloadJson'];
+    const rows = submissions.map((submission) => [
+      submission.id,
+      submission.locale,
+      String(submission.consentGiven),
+      submission.createdAt.toISOString(),
+      JSON.stringify(submission.payloadJson).replace(/"/g, '""'),
+    ]);
+
+    const csv = [
+      headers.join(','),
+      ...rows.map((row) =>
+        row.map((cell) => `"${String(cell)}"`).join(','),
+      ),
+    ].join('\n');
+
+    return csv;
   }
 }
