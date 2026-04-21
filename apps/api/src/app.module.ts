@@ -17,6 +17,9 @@ import { PreviewModule } from './preview/preview.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PublishingModule } from './publishing/publishing.module';
 import { RedirectsModule } from './redirects/redirects.module';
+import { VersionsModule } from './versions/versions.module';
+import { CacheModule } from './cache/cache.module';
+import { RevalidateModule } from './revalidate/revalidate.module';
 
 
 @Module({
@@ -44,6 +47,9 @@ import { RedirectsModule } from './redirects/redirects.module';
     ScheduleModule.forRoot(),
     PublishingModule,
     RedirectsModule,
+    VersionsModule,
+    CacheModule,
+    RevalidateModule,
   ],
   controllers: [AppController],
   providers: [

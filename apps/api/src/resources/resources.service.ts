@@ -1,12 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PublishStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateResourceDto } from './dto/create-resource.dto';
 import { UpdateResourceDto } from './dto/update-resource.dto';
+import { Prisma, PublishStatus } from '@prisma/client';
+import { VersionsService } from '../versions/versions.service';
+import { CacheService } from '../cache/cache.service';
+import { RevalidateService } from '../revalidate/revalidate.service';
+
 
 @Injectable()
 export class ResourcesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly versionsService: VersionsService,
+    private readonly cacheService: CacheService,
+    private readonly revalidateService: RevalidateService
+  ) {}
 
   async create(dto: CreateResourceDto) {
     return this.prisma.resource.create({
@@ -49,7 +58,14 @@ export class ResourcesService {
   }
 
   async update(id: string, dto: UpdateResourceDto) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
+
+    await this.versionsService.createVersion({
+      entityType: 'RESOURCE',
+      entityId: id,
+      snapshotJson: existing as Prisma.InputJsonValue,
+      note: 'Before resource update',
+    });
 
     if (dto.translations) {
       await this.prisma.resourceTranslation.deleteMany({
@@ -57,7 +73,7 @@ export class ResourcesService {
       });
     }
 
-    return this.prisma.resource.update({
+    const updated = await this.prisma.resource.update({
       where: { id },
       data: {
         resourceType: dto.resourceType,
@@ -73,12 +89,16 @@ export class ResourcesService {
         translations: true,
       },
     });
+
+    await this.cacheService.delByPrefix('resource:');
+    
+    return updated;
   }
 
   async publish(id: string) {
     await this.findOne(id);
 
-    return this.prisma.resource.update({
+    const updated = await this.prisma.resource.update({
       where: { id },
       data: {
         status: PublishStatus.PUBLISHED,
@@ -88,10 +108,31 @@ export class ResourcesService {
         translations: true,
       },
     });
+    await this.cacheService.delByPrefix('resource:');
+
+    const tr = updated.translations.find((t) => t.locale === 'TR'); 
+    const en = updated.translations.find((t) => t.locale === 'EN');
+
+    if (tr?.slug) {
+      await this.revalidateService.revalidatePath(`/tr/resources`);
+    }
+    if (en?.slug) {
+      await this.revalidateService.revalidatePath(`/en/resources`);
+    }
+
+    return updated;
   }
 
   async findPublishedList(locale: string) {
-    return this.prisma.resource.findMany({
+    const cacheKey = `resource:list:${locale}`;
+    const cached = await this.cacheService.get(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+
+    const resources = await this.prisma.resource.findMany({
       where: {
         status: PublishStatus.PUBLISHED,
         translations: {
@@ -105,9 +146,20 @@ export class ResourcesService {
       },
       orderBy: { publishedAt: 'desc' },
     });
+
+    await this.cacheService.set(cacheKey, resources, 300);
+
+    return resources;
   }
 
   async findPublishedByLocaleAndSlug(locale: string, slug: string) {
+    const cacheKey = `resource:list:${locale}`;
+    const cached = await this.cacheService.get(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
     const resource = await this.prisma.resource.findFirst({
       where: {
         status: PublishStatus.PUBLISHED,
@@ -127,6 +179,48 @@ export class ResourcesService {
       throw new NotFoundException('Published resource not found');
     }
 
+    await this.cacheService.set(cacheKey, resource, 300);
+
     return resource;
+  }
+
+  async listVersions(id: string) {
+    await this.findOne(id);
+    return this.versionsService.listVersions('RESOURCE', id);
+  }
+
+  async restoreVersion(id: string, versionId: string) {
+    await this.findOne(id);
+
+    const version = await this.versionsService.getVersion(versionId);
+    const snapshot = version.snapshotJson as any;
+
+    await this.prisma.resourceTranslation.deleteMany({
+      where: { resourceId: id },
+    });
+
+    return this.prisma.resource.update({
+      where: { id },
+      data: {
+        resourceType: snapshot.resourceType,
+        status: snapshot.status,
+        externalUrl: snapshot.externalUrl,
+        publishedAt: snapshot.publishedAt ? new Date(snapshot.publishedAt) : null,
+        scheduledAt: snapshot.scheduledAt ? new Date(snapshot.scheduledAt) : null,
+        translations: {
+          create: (snapshot.translations || []).map((t: any) => ({
+            locale: t.locale,
+            title: t.title,
+            slug: t.slug,
+            summary: t.summary,
+            seoTitle: t.seoTitle,
+            seoDescription: t.seoDescription,
+          })),
+        },
+      },
+      include: {
+        translations: true,
+      },
+    });
   }
 }

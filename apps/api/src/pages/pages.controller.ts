@@ -13,6 +13,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreatePageDto } from './dto/create-page.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
 import { PagesService } from './pages.service';
+import { RestoreVersionDto } from '../versions/dto/restore-version.dto';
+
 
 type AuthenticatedRequest = {
   user: {
@@ -57,5 +59,19 @@ export class PagesController {
   @Patch(':id/publish')
   publish(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.pagesService.publish(id, req.user.id);
+  }
+
+  @Get(':id/versions')
+  listVersions(@Param('id') id: string) {
+    return this.pagesService.listVersions(id);
+  }
+
+  @Post(':id/restore')
+  restoreVersion(
+    @Param('id') id: string,
+    @Body() body: RestoreVersionDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.pagesService.restoreVersion(id, body.versionId, req.user.id);
   }
 }

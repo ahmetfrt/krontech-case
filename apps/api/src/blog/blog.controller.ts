@@ -12,6 +12,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BlogService } from './blog.service';
 import { CreateBlogPostDto } from './dto/create-blog-post.dto';
 import { UpdateBlogPostDto } from './dto/update-blog-post.dto';
+import { RestoreVersionDto } from '../versions/dto/restore-version.dto';
 
 @ApiTags('blog')
 @ApiBearerAuth()
@@ -43,5 +44,18 @@ export class BlogController {
   @Patch(':id/publish')
   publish(@Param('id') id: string) {
     return this.blogService.publish(id);
+  }
+
+  @Get(':id/versions')
+  listVersions(@Param('id') id: string) {
+    return this.blogService.listVersions(id);
+  }
+
+  @Post(':id/restore')
+  restoreVersion(
+    @Param('id') id: string,
+    @Body() body: RestoreVersionDto,
+  ) {
+    return this.blogService.restoreVersion(id, body.versionId);
   }
 }
