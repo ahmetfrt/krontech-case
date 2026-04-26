@@ -1,5 +1,7 @@
 import { getPublishedProduct } from '@/lib/products';
+import { JsonLd } from '@/components/seo/json-ld';
 import {
+  breadcrumbJsonLd,
   buildAbsoluteUrl,
   buildMetadata,
   productJsonLd,
@@ -54,13 +56,24 @@ export default async function ProductDetailPage({
     name: current?.title || '',
     description: current?.shortDescription || current?.longDescription || '',
     url: buildAbsoluteUrl(`/${locale}/products/${slug}`),
+    image: heroUrl,
   });
 
   return (
     <main className="p-8 space-y-6">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      <JsonLd data={jsonLd} />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: locale === 'tr' ? 'Ana sayfa' : 'Home', path: `/${locale}` },
+          {
+            name: locale === 'tr' ? 'Urunler' : 'Products',
+            path: `/${locale}/products`,
+          },
+          {
+            name: current?.title || 'Product',
+            path: `/${locale}/products/${slug}`,
+          },
+        ])}
       />
 
 

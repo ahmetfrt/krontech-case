@@ -136,6 +136,39 @@ export class ProductsService {
     return this.withMediaUrls(updated);
   }
 
+  async findPublishedList(locale: string) {
+    const cacheKey = `product:list:${locale}`;
+    const cached = await this.cacheService.get(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+    const products = await this.prisma.product.findMany({
+      where: {
+        status: PublishStatus.PUBLISHED,
+        translations: {
+          some: {
+            locale: locale as any,
+          },
+        },
+      },
+      include: {
+        heroImage: true,
+        translations: true,
+      },
+      orderBy: { publishedAt: 'desc' },
+    });
+
+    const productsWithMedia = products.map((product) =>
+      this.withMediaUrls(product),
+    );
+
+    await this.cacheService.set(cacheKey, productsWithMedia, 300);
+
+    return productsWithMedia;
+  }
+
   async findPublishedByLocaleAndSlug(locale: string, slug: string) {
     const cacheKey = `product:${locale}:${slug}`;
     const cached = await this.cacheService.get(cacheKey);

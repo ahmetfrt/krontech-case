@@ -1,5 +1,6 @@
 import ContactFormPage from '@/components/contact/page';
-import { buildMetadata } from '@/lib/seo';
+import { JsonLd } from '@/components/seo/json-ld';
+import { breadcrumbJsonLd, buildMetadata, contactPageJsonLd } from '@/lib/seo';
 
 export async function generateMetadata({
   params,
@@ -27,5 +28,21 @@ export default async function ContactPage({
 }: {
   params: Promise<{ locale: string }>;
 }) {
-  return <ContactFormPage params={params} />;
+  const { locale } = await params;
+
+  return (
+    <>
+      <JsonLd data={contactPageJsonLd({ path: `/${locale}/contact`, locale })} />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: locale === 'tr' ? 'Ana sayfa' : 'Home', path: `/${locale}` },
+          {
+            name: locale === 'tr' ? 'Iletisim' : 'Contact',
+            path: `/${locale}/contact`,
+          },
+        ])}
+      />
+      <ContactFormPage params={Promise.resolve({ locale })} />
+    </>
+  );
 }

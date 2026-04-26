@@ -1,8 +1,51 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { JsonLd } from '@/components/seo/json-ld';
 import { getPublishedBlogList } from '@/lib/blog';
 import { normalizeApiLocale } from '@/lib/i18n';
 import { resolveMediaUrl } from '@/lib/media';
+import {
+  breadcrumbJsonLd,
+  buildAbsoluteUrl,
+  buildMetadata,
+  collectionPageJsonLd,
+} from '@/lib/seo';
+
+type BlogTranslation = {
+  excerpt?: string | null;
+  locale: string;
+  slug?: string | null;
+  title?: string | null;
+};
+
+type BlogListItem = {
+  featuredImage?: {
+    publicUrl?: string | null;
+  } | null;
+  id: string;
+  translations: BlogTranslation[];
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+
+  return buildMetadata({
+    title: 'Blog',
+    description:
+      locale === 'tr'
+        ? 'Krontech guvenlik, erisim yonetimi ve uyumluluk yazilari'
+        : 'Krontech articles about security, access management and compliance',
+    canonicalPath: `/${locale}/blog`,
+    alternatePaths: {
+      tr: '/tr/blog',
+      en: '/en/blog',
+    },
+  });
+}
 
 export default async function BlogListPage({
   params,
@@ -12,18 +55,52 @@ export default async function BlogListPage({
   const { locale } = await params;
   const apiLocale = normalizeApiLocale(locale);
 
-  const posts = await getPublishedBlogList(apiLocale);
+  const posts = (await getPublishedBlogList(apiLocale)) as BlogListItem[];
+  const pageDescription =
+    locale === 'tr'
+      ? 'Krontech guvenlik, erisim yonetimi ve uyumluluk yazilari'
+      : 'Krontech articles about security, access management and compliance';
+  const itemList = posts
+    .map((post) => {
+      const current = post.translations.find(
+        (translation) => translation.locale === apiLocale,
+      );
+
+      if (!current?.slug || !current.title) return undefined;
+
+      return {
+        name: current.title,
+        url: buildAbsoluteUrl(`/${locale}/blog/${current.slug}`),
+      };
+    })
+    .filter((item): item is { name: string; url: string } => Boolean(item));
 
   return (
     <main className="p-8 space-y-6">
+      <JsonLd
+        data={collectionPageJsonLd({
+          name: 'Blog',
+          description: pageDescription,
+          path: `/${locale}/blog`,
+          locale,
+          items: itemList,
+        })}
+      />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: locale === 'tr' ? 'Ana sayfa' : 'Home', path: `/${locale}` },
+          { name: 'Blog', path: `/${locale}/blog` },
+        ])}
+      />
+
       <h1 className="text-3xl font-bold">
         {locale === 'tr' ? 'Blog' : 'Blog'}
       </h1>
 
       <div className="space-y-4">
-        {posts.map((post: any) => {
+        {posts.map((post) => {
           const current = post.translations.find(
-            (t: any) => t.locale === apiLocale,
+            (translation) => translation.locale === apiLocale,
           );
           const imageUrl = resolveMediaUrl(post.featuredImage?.publicUrl);
 

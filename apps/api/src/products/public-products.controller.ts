@@ -7,6 +7,11 @@ import { ProductsService } from './products.service';
 export class PublicProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  @Get(':locale')
+  findList(@Param('locale') locale: string) {
+    return this.productsService.findPublishedList(locale);
+  }
+
   @Get(':locale/:slug')
   findByLocaleAndSlug(
     @Param('locale') locale: string,

@@ -1,10 +1,21 @@
 import type { MetadataRoute } from 'next';
 import { getPublishedBlogList } from '@/lib/blog';
 import { getPublishedResources } from '@/lib/resources';
-import { getPublishedProduct } from '@/lib/products';
+import { getPublishedProducts } from '@/lib/products';
 import { buildAbsoluteUrl } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+type TranslationRoute = {
+  locale: string;
+  slug?: string | null;
+};
+
+type PublishedEntity = {
+  publishedAt?: string | Date | null;
+  translations?: TranslationRoute[];
+  updatedAt?: string | Date | null;
+};
 
 async function safeList<T>(loader: () => Promise<T[]>): Promise<T[]> {
   try {
@@ -14,41 +25,66 @@ async function safeList<T>(loader: () => Promise<T[]>): Promise<T[]> {
   }
 }
 
-async function getProductRoutes() {
-  const locales = ['TR', 'EN'];
-  const slugs = [
-    { tr: 'kron-pam', en: 'kron-pam-en' },
-  ];
-
+function localizedRoutes(
+  items: PublishedEntity[],
+  locale: 'TR' | 'EN',
+  pathBuilder: (slug: string) => string,
+): MetadataRoute.Sitemap {
   const routes: MetadataRoute.Sitemap = [];
 
-  for (const item of slugs) {
+  for (const item of items) {
+    const translation = item.translations?.find(
+      (entry) => entry.locale === locale,
+    );
+
+    if (!translation?.slug) {
+      continue;
+    }
+
     routes.push({
-      url: buildAbsoluteUrl(`/tr/products/${item.tr}`),
-      lastModified: new Date(),
-    });
-    routes.push({
-      url: buildAbsoluteUrl(`/en/products/${item.en}`),
-      lastModified: new Date(),
+      url: buildAbsoluteUrl(pathBuilder(translation.slug)),
+      lastModified: item.updatedAt || item.publishedAt || new Date(),
     });
   }
 
   return routes;
 }
 
+async function getProductRoutes() {
+  const [trProducts, enProducts] = await Promise.all([
+    safeList<PublishedEntity>(() => getPublishedProducts('TR')),
+    safeList<PublishedEntity>(() => getPublishedProducts('EN')),
+  ]);
+
+  return [
+    ...localizedRoutes(trProducts, 'TR', (slug) => `/tr/products/${slug}`),
+    ...localizedRoutes(enProducts, 'EN', (slug) => `/en/products/${slug}`),
+  ];
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [trBlogPosts, enBlogPosts, trResources, enResources] =
     await Promise.all([
-      safeList(() => getPublishedBlogList('TR')),
-      safeList(() => getPublishedBlogList('EN')),
-      safeList(() => getPublishedResources('TR')),
-      safeList(() => getPublishedResources('EN')),
+      safeList<PublishedEntity>(
+        () => getPublishedBlogList('TR') as Promise<PublishedEntity[]>,
+      ),
+      safeList<PublishedEntity>(
+        () => getPublishedBlogList('EN') as Promise<PublishedEntity[]>,
+      ),
+      safeList<PublishedEntity>(
+        () => getPublishedResources('TR') as Promise<PublishedEntity[]>,
+      ),
+      safeList<PublishedEntity>(
+        () => getPublishedResources('EN') as Promise<PublishedEntity[]>,
+      ),
     ]);
   const productRoutes = await getProductRoutes();
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: buildAbsoluteUrl('/tr'), lastModified: new Date() },
     { url: buildAbsoluteUrl('/en'), lastModified: new Date() },
+    { url: buildAbsoluteUrl('/tr/products'), lastModified: new Date() },
+    { url: buildAbsoluteUrl('/en/products'), lastModified: new Date() },
     { url: buildAbsoluteUrl('/tr/blog'), lastModified: new Date() },
     { url: buildAbsoluteUrl('/en/blog'), lastModified: new Date() },
     { url: buildAbsoluteUrl('/tr/resources'), lastModified: new Date() },
@@ -57,41 +93,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: buildAbsoluteUrl('/en/contact'), lastModified: new Date() },
   ];
 
-  const trBlogRoutes = trBlogPosts.map((post: any) => {
-    const tr = post.translations.find((t: any) => t.locale === 'TR');
+  const trBlogRoutes = localizedRoutes(
+    trBlogPosts,
+    'TR',
+    (slug) => `/tr/blog/${slug}`,
+  );
 
-    return {
-      url: buildAbsoluteUrl(`/tr/blog/${tr?.slug}`),
-      lastModified: post.updatedAt || post.publishedAt || new Date(),
-    };
-  });
+  const enBlogRoutes = localizedRoutes(
+    enBlogPosts,
+    'EN',
+    (slug) => `/en/blog/${slug}`,
+  );
 
-  const enBlogRoutes = enBlogPosts.map((post: any) => {
-    const en = post.translations.find((t: any) => t.locale === 'EN');
+  const trResourceRoutes = localizedRoutes(
+    trResources,
+    'TR',
+    (slug) => `/tr/resources#${slug}`,
+  );
 
-    return {
-      url: buildAbsoluteUrl(`/en/blog/${en?.slug}`),
-      lastModified: post.updatedAt || post.publishedAt || new Date(),
-    };
-  });
-
-  const trResourceRoutes = trResources.map((resource: any) => {
-    const tr = resource.translations.find((t: any) => t.locale === 'TR');
-
-    return {
-      url: buildAbsoluteUrl(`/tr/resources#${tr?.slug}`),
-      lastModified: resource.updatedAt || resource.publishedAt || new Date(),
-    };
-  });
-
-  const enResourceRoutes = enResources.map((resource: any) => {
-    const en = resource.translations.find((t: any) => t.locale === 'EN');
-
-    return {
-      url: buildAbsoluteUrl(`/en/resources#${en?.slug}`),
-      lastModified: resource.updatedAt || resource.publishedAt || new Date(),
-    };
-  });
+  const enResourceRoutes = localizedRoutes(
+    enResources,
+    'EN',
+    (slug) => `/en/resources#${slug}`,
+  );
 
   return [
     ...staticRoutes,

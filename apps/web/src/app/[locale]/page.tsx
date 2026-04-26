@@ -1,6 +1,12 @@
 import Link from 'next/link';
+import { JsonLd } from '@/components/seo/json-ld';
 import { getPublishedPage } from '@/lib/api';
-import { buildMetadata } from '@/lib/seo';
+import {
+  buildMetadata,
+  organizationJsonLd,
+  webPageJsonLd,
+  websiteJsonLd,
+} from '@/lib/seo';
 import { normalizeApiLocale } from '@/lib/i18n';
 
 type PageTranslation = {
@@ -273,6 +279,17 @@ export default async function LocalizedHomePage({
 
   return (
     <main>
+      <JsonLd data={organizationJsonLd()} />
+      <JsonLd data={websiteJsonLd()} />
+      <JsonLd
+        data={webPageJsonLd({
+          name: heroTitle,
+          description: heroSummary,
+          path: `/${activeLocale}`,
+          locale: activeLocale,
+        })}
+      />
+
       <section className="overflow-hidden bg-[#07111f] text-white">
         <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.02fr_0.98fr] lg:px-8 lg:py-24">
           <div className="flex max-w-3xl flex-col justify-center">

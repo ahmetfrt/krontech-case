@@ -1,6 +1,8 @@
 import { getPublishedBlogPost } from '@/lib/blog';
+import { JsonLd } from '@/components/seo/json-ld';
 import {
   articleJsonLd,
+  breadcrumbJsonLd,
   buildAbsoluteUrl,
   buildMetadata,
 } from '@/lib/seo';
@@ -52,13 +54,21 @@ export default async function BlogDetailPage({
     description: current?.excerpt || '',
     url: buildAbsoluteUrl(`/${locale}/blog/${slug}`),
     authorName: post.authorName,
+    image: featuredUrl || undefined,
   });
 
   return (
     <main className="p-8 space-y-6">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      <JsonLd data={jsonLd} />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: locale === 'tr' ? 'Ana sayfa' : 'Home', path: `/${locale}` },
+          { name: 'Blog', path: `/${locale}/blog` },
+          {
+            name: current?.title || 'Blog',
+            path: `/${locale}/blog/${slug}`,
+          },
+        ])}
       />
 
       <article>
