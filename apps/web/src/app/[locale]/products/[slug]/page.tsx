@@ -5,6 +5,9 @@ import {
   productJsonLd,
 } from '@/lib/seo';
 import { normalizeApiLocale } from '@/lib/i18n';
+import Image from 'next/image';
+import { fallbackImage, resolveMediaUrl } from '@/lib/media';
+
 
 export async function generateMetadata({
   params,
@@ -16,6 +19,9 @@ export async function generateMetadata({
 
   const product = await getPublishedProduct(apiLocale, slug);
   const current = product.translations.find((t: any) => t.locale === apiLocale);
+
+  const heroUrl =
+    resolveMediaUrl(product.heroImage?.publicUrl) || fallbackImage();
 
   const trTranslation = product.translations.find((t: any) => t.locale === 'TR');
   const enTranslation = product.translations.find((t: any) => t.locale === 'EN');
@@ -57,6 +63,19 @@ export default async function ProductDetailPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+
+
+      <div className="overflow-hidden rounded-2xl border">
+        <Image
+          src={heroUrl}
+          alt={current?.title || 'Product image'}
+          width={1200}
+          height={700}
+          className="h-auto w-full object-cover"
+          sizes="(max-width: 768px) 100vw, 1200px"
+          priority
+        />
+      </div>
 
       <header>
         <h1 className="text-3xl font-bold">{current?.title}</h1>

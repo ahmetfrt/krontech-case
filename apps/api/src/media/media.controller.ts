@@ -15,6 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MediaService } from './media.service';
+import { Param } from '@nestjs/common';
 
 @ApiTags('media')
 @ApiBearerAuth()
@@ -45,5 +46,10 @@ export class MediaController {
   @Get()
   findAll() {
     return this.mediaService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.mediaService.findOne(id);
   }
 }

@@ -28,6 +28,7 @@ export class BlogService {
       },
       include: {
         translations: true,
+        featuredImage: true,
       },
     });
   }
@@ -36,6 +37,7 @@ export class BlogService {
     return this.prisma.blogPost.findMany({
       include: {
         translations: true,
+        featuredImage: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -46,6 +48,7 @@ export class BlogService {
       where: { id },
       include: {
         translations: true,
+        featuredImage: true,
       },
     });
 
@@ -85,6 +88,7 @@ export class BlogService {
       },
       include: {
         translations: true,
+        featuredImage: true,
       },
     });
 
@@ -104,6 +108,7 @@ export class BlogService {
       },
       include: {
         translations: true,
+        featuredImage: true,
       },
     });
     
@@ -134,6 +139,7 @@ export class BlogService {
       },
       include: {
         translations: true,
+        featuredImage: true,
       },
       orderBy: { publishedAt: 'desc' },
     });
@@ -159,6 +165,7 @@ export class BlogService {
       },
       include: {
         translations: true,
+        featuredImage: true,
       },
     });
 
@@ -210,6 +217,7 @@ export class BlogService {
       },
       include: {
         translations: true,
+        featuredImage: true,
       },
     });
   }

@@ -33,8 +33,30 @@ export class MediaService {
   }
 
   async findAll() {
-    return this.prisma.mediaAsset.findMany({
+    const items = await this.prisma.mediaAsset.findMany({
       orderBy: { createdAt: 'desc' },
     });
+
+    return items.map((item) => ({
+      ...item,
+      publicUrl: `http://localhost:9000/${
+        process.env.MINIO_BUCKET ?? 'krontech-media'
+      }/${item.storageKey}`,
+    }));
+  }
+
+  async findOne(id: string) {
+    const item = await this.prisma.mediaAsset.findUnique({
+      where: { id },
+    });
+
+    if (!item) return null;
+
+    return {
+      ...item,
+      publicUrl: `http://localhost:9000/${
+        process.env.MINIO_BUCKET ?? 'krontech-media'
+      }/${item.storageKey}`,
+    };
   }
 }

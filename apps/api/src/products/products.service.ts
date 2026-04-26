@@ -27,6 +27,7 @@ export class ProductsService {
         },
       },
       include: {
+        heroImage: true,
         translations: true,
       },
     });
@@ -35,6 +36,7 @@ export class ProductsService {
   async findAll() {
     return this.prisma.product.findMany({
       include: {
+        heroImage: true,
         translations: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -45,6 +47,7 @@ export class ProductsService {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: {
+        heroImage: true,
         translations: true,
       },
     });
@@ -85,6 +88,7 @@ export class ProductsService {
       },
       include: {
         translations: true,
+        heroImage: true,
       },
     });
 
@@ -104,6 +108,7 @@ export class ProductsService {
       },
       include: {
         translations: true,
+        heroImage: true,
       },
     });
 
@@ -141,6 +146,7 @@ export class ProductsService {
         },
       },
       include: {
+        heroImage: true,
         translations: true,
         resources: {
           include: {
@@ -202,6 +208,7 @@ export class ProductsService {
       },
       include: {
         translations: true,
+        heroImage: true,
       },
     });
   }    

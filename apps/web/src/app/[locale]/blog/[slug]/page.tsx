@@ -5,6 +5,9 @@ import {
   buildMetadata,
 } from '@/lib/seo';
 import { normalizeApiLocale } from '@/lib/i18n';
+import Image from 'next/image';
+import { fallbackImage, resolveMediaUrl } from '@/lib/media';
+
 
 export async function generateMetadata({
   params,
