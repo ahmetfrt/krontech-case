@@ -6,6 +6,7 @@ import { Prisma, PublishStatus } from '@prisma/client';
 import { VersionsService } from '../versions/versions.service';
 import { CacheService } from '../cache/cache.service';
 import { RevalidateService } from '../revalidate/revalidate.service';
+import { MediaService } from '../media/media.service';
 
 
 @Injectable()
@@ -14,14 +15,16 @@ export class BlogService {
     private readonly prisma: PrismaService,
     private readonly versionsService: VersionsService,
     private readonly cacheService: CacheService,
-    private readonly revalidateService: RevalidateService
+    private readonly revalidateService: RevalidateService,
+    private readonly mediaService: MediaService,
   ) {}
 
   async create(dto: CreateBlogPostDto) {
-    return this.prisma.blogPost.create({
+    const post = await this.prisma.blogPost.create({
       data: {
         status: dto.status ?? PublishStatus.DRAFT,
         authorName: dto.authorName,
+        featuredImageId: dto.featuredImageId,
         translations: {
           create: dto.translations,
         },
@@ -31,16 +34,20 @@ export class BlogService {
         featuredImage: true,
       },
     });
+
+    return this.withMediaUrls(post);
   }
 
   async findAll() {
-    return this.prisma.blogPost.findMany({
+    const posts = await this.prisma.blogPost.findMany({
       include: {
         translations: true,
         featuredImage: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return posts.map((post) => this.withMediaUrls(post));
   }
 
   async findOne(id: string) {
@@ -56,7 +63,7 @@ export class BlogService {
       throw new NotFoundException('Blog post not found');
     }
 
-    return post;
+    return this.withMediaUrls(post);
   }
 
   async update(id: string, dto: UpdateBlogPostDto) {
@@ -80,6 +87,8 @@ export class BlogService {
       data: {
         status: dto.status,
         authorName: dto.authorName,
+        featuredImageId:
+          dto.featuredImageId === undefined ? undefined : dto.featuredImageId,
         translations: dto.translations
           ? {
               create: dto.translations,
@@ -94,7 +103,7 @@ export class BlogService {
 
     await this.cacheService.delByPrefix('blog:');
     
-    return updated;
+    return this.withMediaUrls(updated);
   }
 
   async publish(id: string) {
@@ -124,11 +133,11 @@ export class BlogService {
       await this.revalidateService.revalidatePath(`/en/blog/${en.slug}`);
     }
 
-    return updated;
+    return this.withMediaUrls(updated);
   }
 
   async findPublishedList(locale: string) {
-    return this.prisma.blogPost.findMany({
+    const posts = await this.prisma.blogPost.findMany({
       where: {
         status: PublishStatus.PUBLISHED,
         translations: {
@@ -143,6 +152,8 @@ export class BlogService {
       },
       orderBy: { publishedAt: 'desc' },
     });
+
+    return posts.map((post) => this.withMediaUrls(post));
   }
 
   async findPublishedByLocaleAndSlug(locale: string, slug: string) {
@@ -173,9 +184,11 @@ export class BlogService {
       throw new NotFoundException('Published blog post not found');
     }
 
-    await this.cacheService.set(cacheKey, post, 300);
+    const postWithMedia = this.withMediaUrls(post);
 
-    return post;
+    await this.cacheService.set(cacheKey, postWithMedia, 300);
+
+    return postWithMedia;
   }
 
   async listVersions(id: string) {
@@ -198,6 +211,7 @@ export class BlogService {
       data: {
         status: snapshot.status,
         authorName: snapshot.authorName,
+        featuredImageId: snapshot.featuredImageId ?? null,
         publishedAt: snapshot.publishedAt ? new Date(snapshot.publishedAt) : null,
         scheduledAt: snapshot.scheduledAt ? new Date(snapshot.scheduledAt) : null,
         translations: {
@@ -220,5 +234,14 @@ export class BlogService {
         featuredImage: true,
       },
     });
+  }
+
+  private withMediaUrls<
+    T extends { featuredImage?: { storageKey: string } | null },
+  >(post: T) {
+    return {
+      ...post,
+      featuredImage: this.mediaService.withPublicUrl(post.featuredImage),
+    };
   }
 }

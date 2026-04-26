@@ -54,6 +54,10 @@ export class CreateBlogPostDto {
 
   @IsOptional()
   @IsString()
+  featuredImageId?: string | null;
+
+  @IsOptional()
+  @IsString()
   authorName?: string;
 
   @IsArray()

@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   Controller,
   Get,
+  Param,
   Post,
   UploadedFile,
   UseGuards,
@@ -15,7 +17,6 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MediaService } from './media.service';
-import { Param } from '@nestjs/common';
 
 @ApiTags('media')
 @ApiBearerAuth()
@@ -40,6 +41,10 @@ export class MediaController {
   })
   @UseInterceptors(FileInterceptor('file'))
   upload(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
     return this.mediaService.upload(file);
   }
 

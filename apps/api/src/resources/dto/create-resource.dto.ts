@@ -36,6 +36,10 @@ export class CreateResourceDto {
   resourceType: ResourceType;
 
   @IsOptional()
+  @IsString()
+  fileId?: string | null;
+
+  @IsOptional()
   @IsEnum(PublishStatus)
   status?: PublishStatus;
 

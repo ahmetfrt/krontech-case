@@ -6,6 +6,7 @@ import { Prisma, PublishStatus } from '@prisma/client';
 import { VersionsService } from '../versions/versions.service';
 import { CacheService } from '../cache/cache.service';
 import { RevalidateService } from '../revalidate/revalidate.service';
+import { MediaService } from '../media/media.service';
 
 
 @Injectable()
@@ -14,38 +15,47 @@ export class ResourcesService {
     private readonly prisma: PrismaService,
     private readonly versionsService: VersionsService,
     private readonly cacheService: CacheService,
-    private readonly revalidateService: RevalidateService
+    private readonly revalidateService: RevalidateService,
+    private readonly mediaService: MediaService,
   ) {}
 
   async create(dto: CreateResourceDto) {
-    return this.prisma.resource.create({
+    const resource = await this.prisma.resource.create({
       data: {
         resourceType: dto.resourceType,
         status: dto.status ?? PublishStatus.DRAFT,
+        fileId: dto.fileId,
         externalUrl: dto.externalUrl,
         translations: {
           create: dto.translations,
         },
       },
       include: {
+        file: true,
         translations: true,
       },
     });
+
+    return this.withMediaUrls(resource);
   }
 
   async findAll() {
-    return this.prisma.resource.findMany({
+    const resources = await this.prisma.resource.findMany({
       include: {
+        file: true,
         translations: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return resources.map((resource) => this.withMediaUrls(resource));
   }
 
   async findOne(id: string) {
     const resource = await this.prisma.resource.findUnique({
       where: { id },
       include: {
+        file: true,
         translations: true,
       },
     });
@@ -54,7 +64,7 @@ export class ResourcesService {
       throw new NotFoundException('Resource not found');
     }
 
-    return resource;
+    return this.withMediaUrls(resource);
   }
 
   async update(id: string, dto: UpdateResourceDto) {
@@ -78,6 +88,7 @@ export class ResourcesService {
       data: {
         resourceType: dto.resourceType,
         status: dto.status,
+        fileId: dto.fileId === undefined ? undefined : dto.fileId,
         externalUrl: dto.externalUrl,
         translations: dto.translations
           ? {
@@ -86,13 +97,14 @@ export class ResourcesService {
           : undefined,
       },
       include: {
+        file: true,
         translations: true,
       },
     });
 
     await this.cacheService.delByPrefix('resource:');
     
-    return updated;
+    return this.withMediaUrls(updated);
   }
 
   async publish(id: string) {
@@ -105,6 +117,7 @@ export class ResourcesService {
         publishedAt: new Date(),
       },
       include: {
+        file: true,
         translations: true,
       },
     });
@@ -120,7 +133,7 @@ export class ResourcesService {
       await this.revalidateService.revalidatePath(`/en/resources`);
     }
 
-    return updated;
+    return this.withMediaUrls(updated);
   }
 
   async findPublishedList(locale: string) {
@@ -142,18 +155,23 @@ export class ResourcesService {
         },
       },
       include: {
+        file: true,
         translations: true,
       },
       orderBy: { publishedAt: 'desc' },
     });
 
-    await this.cacheService.set(cacheKey, resources, 300);
+    const resourcesWithMedia = resources.map((resource) =>
+      this.withMediaUrls(resource),
+    );
 
-    return resources;
+    await this.cacheService.set(cacheKey, resourcesWithMedia, 300);
+
+    return resourcesWithMedia;
   }
 
   async findPublishedByLocaleAndSlug(locale: string, slug: string) {
-    const cacheKey = `resource:list:${locale}`;
+    const cacheKey = `resource:${locale}:${slug}`;
     const cached = await this.cacheService.get(cacheKey);
 
     if (cached) {
@@ -171,6 +189,7 @@ export class ResourcesService {
         },
       },
       include: {
+        file: true,
         translations: true,
       },
     });
@@ -179,9 +198,11 @@ export class ResourcesService {
       throw new NotFoundException('Published resource not found');
     }
 
-    await this.cacheService.set(cacheKey, resource, 300);
+    const resourceWithMedia = this.withMediaUrls(resource);
 
-    return resource;
+    await this.cacheService.set(cacheKey, resourceWithMedia, 300);
+
+    return resourceWithMedia;
   }
 
   async listVersions(id: string) {
@@ -204,6 +225,7 @@ export class ResourcesService {
       data: {
         resourceType: snapshot.resourceType,
         status: snapshot.status,
+        fileId: snapshot.fileId ?? null,
         externalUrl: snapshot.externalUrl,
         publishedAt: snapshot.publishedAt ? new Date(snapshot.publishedAt) : null,
         scheduledAt: snapshot.scheduledAt ? new Date(snapshot.scheduledAt) : null,
@@ -219,8 +241,18 @@ export class ResourcesService {
         },
       },
       include: {
+        file: true,
         translations: true,
       },
     });
+  }
+
+  private withMediaUrls<T extends { file?: { storageKey: string } | null }>(
+    resource: T,
+  ) {
+    return {
+      ...resource,
+      file: this.mediaService.withPublicUrl(resource.file),
+    };
   }
 }

@@ -6,10 +6,13 @@ export async function adminFetch<T = unknown>(
   token: string,
   options?: RequestInit,
 ): Promise<T> {
+  const isFormData =
+    typeof FormData !== 'undefined' && options?.body instanceof FormData;
+
   const res = await fetch(`${ADMIN_API_BASE}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       Authorization: `Bearer ${token}`,
       ...(options?.headers || {}),
     },

@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
         port: '9000',
         pathname: '/krontech-media/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+      },
     ],
   },
 };

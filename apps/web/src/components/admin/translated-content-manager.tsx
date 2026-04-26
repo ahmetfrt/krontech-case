@@ -18,7 +18,14 @@ const RESOURCE_TYPES = [
 
 type Locale = (typeof LOCALES)[number];
 type PublishStatus = (typeof STATUSES)[number];
-type RootKey = 'authorName' | 'externalUrl' | 'productCode' | 'resourceType';
+type RootKey =
+  | 'authorName'
+  | 'externalUrl'
+  | 'featuredImageId'
+  | 'fileId'
+  | 'heroImageId'
+  | 'productCode'
+  | 'resourceType';
 type TranslationKey =
   | 'canonicalUrl'
   | 'content'
@@ -40,9 +47,10 @@ type RootField = {
   help?: string;
   key: RootKey;
   label: string;
+  mediaKind?: 'all' | 'image';
   options?: readonly string[];
   required?: boolean;
-  type?: 'select' | 'text';
+  type?: 'media' | 'select' | 'text';
 };
 
 type TranslationField = {
@@ -79,6 +87,13 @@ type ContentItem = Partial<Record<RootKey, string | null>> & {
   updatedAt?: string;
 };
 
+type MediaAsset = {
+  fileName: string;
+  id: string;
+  mimeType?: string;
+  publicUrl: string;
+};
+
 type EditorState = {
   id?: string;
   root: RootState;
@@ -105,6 +120,13 @@ export const contentManagerConfigs = {
         key: 'productCode',
         label: 'Product code',
         required: true,
+      },
+      {
+        help: 'Shown on the public product detail hero.',
+        key: 'heroImageId',
+        label: 'Hero image',
+        mediaKind: 'image',
+        type: 'media',
       },
     ],
     title: 'Products',
@@ -143,7 +165,16 @@ export const contentManagerConfigs = {
     emptyText: 'No blog posts yet. Create the first article from the form.',
     endpoint: '/blog',
     entityLabel: 'Blog post',
-    rootFields: [{ key: 'authorName', label: 'Author name' }],
+    rootFields: [
+      { key: 'authorName', label: 'Author name' },
+      {
+        help: 'Shown on public blog detail and lists.',
+        key: 'featuredImageId',
+        label: 'Featured image',
+        mediaKind: 'image',
+        type: 'media',
+      },
+    ],
     title: 'Blog',
     translationFields: [
       { key: 'title', label: 'Title', required: true },
@@ -181,6 +212,13 @@ export const contentManagerConfigs = {
         type: 'select',
       },
       { key: 'externalUrl', label: 'External URL' },
+      {
+        help: 'Optional downloadable file from the media library.',
+        key: 'fileId',
+        label: 'Resource file',
+        mediaKind: 'all',
+        type: 'media',
+      },
     ],
     title: 'Resources',
     translationFields: [
@@ -220,6 +258,7 @@ export function TranslatedContentManager({
   const [error, setError] = useState('');
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mediaItems, setMediaItems] = useState<MediaAsset[]>([]);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -244,6 +283,24 @@ export function TranslatedContentManager({
   useEffect(() => {
     void loadItems();
   }, [loadItems]);
+
+  useEffect(() => {
+    if (!config.rootFields.some((field) => field.type === 'media')) {
+      return;
+    }
+
+    async function loadMedia() {
+      try {
+        const token = getAdminToken();
+        const data = await adminFetch<MediaAsset[]>('/media', token);
+        setMediaItems(Array.isArray(data) ? data : []);
+      } catch {
+        setMediaItems([]);
+      }
+    }
+
+    void loadMedia();
+  }, [config.rootFields]);
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -422,6 +479,7 @@ export function TranslatedContentManager({
                   key={field.key}
                   editor={editor}
                   field={field}
+                  mediaItems={mediaItems}
                   setEditor={setEditor}
                 />
               ))}
@@ -486,12 +544,41 @@ export function TranslatedContentManager({
 function RootFieldControl({
   editor,
   field,
+  mediaItems,
   setEditor,
 }: {
   editor: EditorState;
   field: RootField;
+  mediaItems: MediaAsset[];
   setEditor: Dispatch<SetStateAction<EditorState>>;
 }) {
+  if (field.type === 'media') {
+    const selectableMedia = mediaItems.filter((item) =>
+      field.mediaKind === 'image' ? item.mimeType?.startsWith('image/') : true,
+    );
+
+    return (
+      <label className="space-y-2">
+        <span className="text-sm font-semibold text-gray-700">
+          {field.label}
+        </span>
+        <select
+          value={editor.root[field.key]}
+          onChange={(event) => updateRoot(field.key, event.target.value, setEditor)}
+          className="h-11 w-full rounded-md border border-gray-300 px-3 text-sm"
+        >
+          <option value="">No media selected</option>
+          {selectableMedia.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.fileName}
+            </option>
+          ))}
+        </select>
+        {field.help ? <span className="block text-xs text-gray-500">{field.help}</span> : null}
+      </label>
+    );
+  }
+
   if (field.type === 'select') {
     return (
       <label className="space-y-2">
@@ -575,6 +662,9 @@ function createEmptyEditor(config: ManagerConfig): EditorState {
     root: {
       authorName: config.rootDefaults?.authorName ?? '',
       externalUrl: config.rootDefaults?.externalUrl ?? '',
+      featuredImageId: config.rootDefaults?.featuredImageId ?? '',
+      fileId: config.rootDefaults?.fileId ?? '',
+      heroImageId: config.rootDefaults?.heroImageId ?? '',
       productCode: config.rootDefaults?.productCode ?? '',
       resourceType: config.rootDefaults?.resourceType ?? '',
     },
@@ -639,6 +729,11 @@ function buildPayload(editor: EditorState, config: ManagerConfig) {
 
     if (field.required && !value) {
       throw new Error(`${field.label} is required.`);
+    }
+
+    if (field.type === 'media') {
+      payload[field.key] = value || null;
+      continue;
     }
 
     if (value) {

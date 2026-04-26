@@ -45,6 +45,7 @@ export default async function BlogDetailPage({
 
   const post = await getPublishedBlogPost(apiLocale, slug);
   const current = post.translations.find((t: any) => t.locale === apiLocale);
+  const featuredUrl = resolveMediaUrl(post.featuredImage?.publicUrl);
 
   const jsonLd = articleJsonLd({
     headline: current?.title || '',
@@ -61,6 +62,20 @@ export default async function BlogDetailPage({
       />
 
       <article>
+        {featuredUrl ? (
+          <div className="mb-8 overflow-hidden rounded-lg border border-gray-200">
+            <Image
+              src={featuredUrl}
+              alt={current?.title || 'Blog image'}
+              width={1200}
+              height={700}
+              className="h-auto w-full object-cover"
+              sizes="(max-width: 768px) 100vw, 1200px"
+              priority
+            />
+          </div>
+        ) : null}
+
         <header className="space-y-2">
           <h1 className="text-3xl font-bold">{current?.title}</h1>
           <p className="text-sm text-gray-500">

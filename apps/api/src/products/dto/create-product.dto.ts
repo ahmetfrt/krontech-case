@@ -52,6 +52,10 @@ export class CreateProductDto {
   productCode: string;
 
   @IsOptional()
+  @IsString()
+  heroImageId?: string | null;
+
+  @IsOptional()
   @IsEnum(PublishStatus)
   status?: PublishStatus;
 

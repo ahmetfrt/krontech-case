@@ -6,6 +6,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { VersionsService } from '../versions/versions.service';
 import { CacheService } from '../cache/cache.service';
 import { RevalidateService } from '../revalidate/revalidate.service';
+import { MediaService } from '../media/media.service';
 
 
 @Injectable()
@@ -14,13 +15,15 @@ export class ProductsService {
     private readonly prisma: PrismaService,
     private readonly versionsService: VersionsService,
     private readonly cacheService: CacheService,
-    private readonly revalidateService: RevalidateService
+    private readonly revalidateService: RevalidateService,
+    private readonly mediaService: MediaService,
   ) {}
 
   async create(dto: CreateProductDto) {
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       data: {
         productCode: dto.productCode,
+        heroImageId: dto.heroImageId,
         status: dto.status ?? PublishStatus.DRAFT,
         translations: {
           create: dto.translations,
@@ -31,16 +34,20 @@ export class ProductsService {
         translations: true,
       },
     });
+
+    return this.withMediaUrls(product);
   }
 
   async findAll() {
-    return this.prisma.product.findMany({
+    const products = await this.prisma.product.findMany({
       include: {
         heroImage: true,
         translations: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return products.map((product) => this.withMediaUrls(product));
   }
 
   async findOne(id: string) {
@@ -56,7 +63,7 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
-    return product;
+    return this.withMediaUrls(product);
   }
 
   async update(id: string, dto: UpdateProductDto) {
@@ -79,6 +86,8 @@ export class ProductsService {
       where: { id },
       data: {
         productCode: dto.productCode,
+        heroImageId:
+          dto.heroImageId === undefined ? undefined : dto.heroImageId,
         status: dto.status,
         translations: dto.translations
           ? {
@@ -94,7 +103,7 @@ export class ProductsService {
 
     await this.cacheService.delByPrefix('product:');
 
-    return updated;
+    return this.withMediaUrls(updated);
   }
 
   async publish(id: string) {
@@ -124,7 +133,7 @@ export class ProductsService {
       await this.revalidateService.revalidatePath(`/en/products/${en.slug}`);
     }
 
-    return updated;
+    return this.withMediaUrls(updated);
   }
 
   async findPublishedByLocaleAndSlug(locale: string, slug: string) {
@@ -164,9 +173,11 @@ export class ProductsService {
       throw new NotFoundException('Published product not found');
     }
 
-    await this.cacheService.set(cacheKey, product, 300);
+    const productWithMedia = this.withMediaUrls(product);
 
-    return product;
+    await this.cacheService.set(cacheKey, productWithMedia, 300);
+
+    return productWithMedia;
   }
 
   async listVersions(id: string) {
@@ -188,6 +199,7 @@ export class ProductsService {
       where: { id },
       data: {
         productCode: snapshot.productCode,
+        heroImageId: snapshot.heroImageId ?? null,
         status: snapshot.status,
         publishedAt: snapshot.publishedAt ? new Date(snapshot.publishedAt) : null,
         scheduledAt: snapshot.scheduledAt ? new Date(snapshot.scheduledAt) : null,
@@ -212,4 +224,13 @@ export class ProductsService {
       },
     });
   }    
+
+  private withMediaUrls<T extends { heroImage?: { storageKey: string } | null }>(
+    product: T,
+  ) {
+    return {
+      ...product,
+      heroImage: this.mediaService.withPublicUrl(product.heroImage),
+    };
+  }
 }
