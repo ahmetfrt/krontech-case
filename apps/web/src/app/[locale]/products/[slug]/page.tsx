@@ -20,9 +20,6 @@ export async function generateMetadata({
   const product = await getPublishedProduct(apiLocale, slug);
   const current = product.translations.find((t: any) => t.locale === apiLocale);
 
-  const heroUrl =
-    resolveMediaUrl(product.heroImage?.publicUrl) || fallbackImage();
-
   const trTranslation = product.translations.find((t: any) => t.locale === 'TR');
   const enTranslation = product.translations.find((t: any) => t.locale === 'EN');
 
@@ -50,6 +47,8 @@ export default async function ProductDetailPage({
 
   const product = await getPublishedProduct(apiLocale, slug);
   const current = product.translations.find((t: any) => t.locale === apiLocale);
+  const heroUrl =
+    resolveMediaUrl(product.heroImage?.publicUrl) || fallbackImage();
 
   const jsonLd = productJsonLd({
     name: current?.title || '',

@@ -1,4 +1,4 @@
-import ContactFormPage from '@/components/contact/contact-form-page';
+import ContactFormPage from '@/components/contact/page';
 import { buildMetadata } from '@/lib/seo';
 
 export async function generateMetadata({
