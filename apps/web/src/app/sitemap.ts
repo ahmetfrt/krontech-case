@@ -4,6 +4,16 @@ import { getPublishedResources } from '@/lib/resources';
 import { getPublishedProduct } from '@/lib/products';
 import { buildAbsoluteUrl } from '@/lib/seo';
 
+export const dynamic = 'force-dynamic';
+
+async function safeList<T>(loader: () => Promise<T[]>): Promise<T[]> {
+  try {
+    return await loader();
+  } catch {
+    return [];
+  }
+}
+
 async function getProductRoutes() {
   const locales = ['TR', 'EN'];
   const slugs = [
@@ -27,10 +37,13 @@ async function getProductRoutes() {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const trBlogPosts = await getPublishedBlogList('TR');
-  const enBlogPosts = await getPublishedBlogList('EN');
-  const trResources = await getPublishedResources('TR');
-  const enResources = await getPublishedResources('EN');
+  const [trBlogPosts, enBlogPosts, trResources, enResources] =
+    await Promise.all([
+      safeList(() => getPublishedBlogList('TR')),
+      safeList(() => getPublishedBlogList('EN')),
+      safeList(() => getPublishedResources('TR')),
+      safeList(() => getPublishedResources('EN')),
+    ]);
   const productRoutes = await getProductRoutes();
 
   const staticRoutes: MetadataRoute.Sitemap = [
