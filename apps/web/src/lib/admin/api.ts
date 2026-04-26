@@ -1,7 +1,7 @@
 export const ADMIN_API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-export async function adminFetch<T = any>(
+export async function adminFetch<T = unknown>(
   path: string,
   token: string,
   options?: RequestInit,

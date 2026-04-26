@@ -1,5 +1,5 @@
-import { ResourceListPage } from '@/components/admin/resource-list-page';
+import { BlogContentManager } from '@/components/admin/translated-content-manager';
 
 export default function AdminBlogPage() {
-  return <ResourceListPage title="Blog" endpoint="/blog" />;
+  return <BlogContentManager />;
 }

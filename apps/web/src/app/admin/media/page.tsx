@@ -6,8 +6,15 @@ import { ProtectedAdmin } from '@/components/admin/protected-admin';
 import { adminFetch } from '@/lib/admin/api';
 import { getAdminToken } from '@/lib/admin/auth';
 
+type MediaAsset = {
+  fileName: string;
+  id: string;
+  mimeType?: string;
+  publicUrl: string;
+};
+
 export default function AdminMediaPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<MediaAsset[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -15,8 +22,8 @@ export default function AdminMediaPage() {
     async function load() {
       try {
         const token = getAdminToken();
-        const data = await adminFetch('/media', token);
-        setItems(data);
+        const data = await adminFetch<MediaAsset[]>('/media', token);
+        setItems(Array.isArray(data) ? data : []);
       } catch {
         setError('Media verileri alınamadı.');
       } finally {

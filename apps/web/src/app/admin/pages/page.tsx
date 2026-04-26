@@ -1,5 +1,5 @@
-import { ResourceListPage } from '@/components/admin/resource-list-page';
+import { PageManager } from '@/components/admin/page-manager';
 
 export default function AdminPagesPage() {
-  return <ResourceListPage title="Pages" endpoint="/pages" />;
+  return <PageManager />;
 }

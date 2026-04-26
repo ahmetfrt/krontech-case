@@ -1,5 +1,5 @@
-import { ResourceListPage } from '@/components/admin/resource-list-page';
+import { ProductContentManager } from '@/components/admin/translated-content-manager';
 
 export default function AdminProductsPage() {
-  return <ResourceListPage title="Products" endpoint="/products" />;
+  return <ProductContentManager />;
 }
