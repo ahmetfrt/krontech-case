@@ -28,7 +28,7 @@ class CreateFormFieldDto {
   sortOrder: number;
 
   @IsOptional()
-  optionsJson?: any;
+  optionsJson?: unknown;
 }
 
 export class CreateFormDto {

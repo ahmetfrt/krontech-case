@@ -1,4 +1,10 @@
-import { IsBoolean, IsEnum, IsObject, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsObject,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { Locale } from '@prisma/client';
 
 export class SubmitFormDto {
@@ -6,7 +12,7 @@ export class SubmitFormDto {
   locale: Locale;
 
   @IsObject()
-  payloadJson: Record<string, any>;
+  payloadJson: Record<string, unknown>;
 
   @IsBoolean()
   consentGiven: boolean;

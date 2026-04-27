@@ -1,5 +1,5 @@
-import { ResourceListPage } from '@/components/admin/resource-list-page';
+import { FormManager } from '@/components/admin/form-manager';
 
 export default function AdminFormsPage() {
-  return <ResourceListPage title="Forms" endpoint="/forms" />;
+  return <FormManager />;
 }

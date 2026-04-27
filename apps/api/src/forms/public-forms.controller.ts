@@ -1,5 +1,13 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseEnumPipe,
+  Post,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { FormType } from '@prisma/client';
 import { SubmitFormDto } from './dto/submit-form.dto';
 import { FormsService } from './forms.service';
 import { Throttle } from '@nestjs/throttler';
@@ -8,6 +16,13 @@ import { Throttle } from '@nestjs/throttler';
 @Controller('public/forms')
 export class PublicFormsController {
   constructor(private readonly formsService: FormsService) {}
+
+  @Get('type/:formType')
+  getFormByType(
+    @Param('formType', new ParseEnumPipe(FormType)) formType: FormType,
+  ) {
+    return this.formsService.getPublicFormByType(formType);
+  }
 
   @Get(':id')
   getForm(@Param('id') id: string) {
