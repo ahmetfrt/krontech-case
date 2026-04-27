@@ -1,8 +1,9 @@
 import { JsonLd } from '@/components/seo/json-ld';
 import Link from 'next/link';
+import Image from 'next/image';
 import { getPublishedResources } from '@/lib/resources';
 import { normalizeApiLocale } from '@/lib/i18n';
-import { resolveMediaUrl } from '@/lib/media';
+import { resourceFallbackImage, resolveMediaUrl } from '@/lib/media';
 import {
   breadcrumbJsonLd,
   buildAbsoluteUrl,
@@ -86,7 +87,7 @@ export default async function ResourcesPage({
     .filter((item): item is { name: string; url: string } => Boolean(item));
 
   return (
-    <main className="p-8 space-y-6">
+    <main className="bg-white">
       <JsonLd
         data={collectionPageJsonLd({
           name: title,
@@ -103,58 +104,119 @@ export default async function ResourcesPage({
         ])}
       />
 
-      <h1 className="text-3xl font-bold">{title}</h1>
+      <section className="border-b border-slate-200 bg-slate-950 px-4 py-14 text-white sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="flex flex-col justify-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-red-300">
+              {locale === 'tr' ? 'Kaynak Merkezi' : 'Resource Center'}
+            </p>
+            <h1 className="mt-4 text-4xl font-bold tracking-normal sm:text-5xl">
+              {title}
+            </h1>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-200">
+              {description}
+            </p>
+          </div>
+          <picture className="overflow-hidden rounded-lg border border-white/10 bg-slate-900 shadow-2xl shadow-black/30">
+            <source
+              srcSet="/images/kron-resource-library.avif"
+              type="image/avif"
+            />
+            <source
+              srcSet="/images/kron-resource-library.webp"
+              type="image/webp"
+            />
+            <Image
+              src="/images/kron-resource-library.webp"
+              alt={
+                locale === 'tr'
+                  ? 'Krontech siber guvenlik kaynak kutuphanesi gorseli'
+                  : 'Krontech cybersecurity resource library visual'
+              }
+              width={1600}
+              height={1000}
+              className="h-full min-h-[280px] w-full object-cover"
+              sizes="(max-width: 1024px) 100vw, 48vw"
+            />
+          </picture>
+        </div>
+      </section>
 
-      <div className="space-y-4">
-        {resources.map((resource) => {
-          const current = resource.translations.find(
-            (translation) => translation.locale === apiLocale,
-          );
-          const fileUrl = resolveMediaUrl(resource.file?.publicUrl);
+      <section className="px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-2">
+          {resources.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-300 p-8 text-slate-600 md:col-span-2">
+              {locale === 'tr'
+                ? 'Yayinda kaynak bulunamadi.'
+                : 'No published resources yet.'}
+            </div>
+          ) : null}
 
-          return (
-            <article
-              key={resource.id}
-              id={current?.slug ?? resource.id}
-              className="rounded-xl border p-4"
-            >
-              <div className="text-sm text-gray-500">{resource.resourceType}</div>
-              <h2 className="text-xl font-semibold">{current?.title}</h2>
-              <p className="text-gray-600">{current?.summary}</p>
-              <div className="mt-2 flex flex-wrap gap-3">
-                {fileUrl ? (
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-block text-blue-600 underline"
-                  >
-                    {locale === 'tr' ? 'Dosyayı indir' : 'Download file'}
-                  </a>
-                ) : null}
-                {resource.externalUrl ? (
-                  <a
-                    href={resource.externalUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-block text-blue-600 underline"
-                  >
-                    {locale === 'tr' ? 'Kaynağı aç' : 'Open resource'}
-                  </a>
-                ) : null}
-                {current?.slug ? (
-                  <Link
-                    href={`/${locale}/resources/${current.slug}`}
-                    className="inline-block text-blue-600 underline"
-                  >
-                    {locale === 'tr' ? 'Detayları incele' : 'View details'}
-                  </Link>
-                ) : null}
-              </div>
-            </article>
-          );
-        })}
-      </div>
+          {resources.map((resource) => {
+            const current = resource.translations.find(
+              (translation) => translation.locale === apiLocale,
+            );
+            const fileUrl = resolveMediaUrl(resource.file?.publicUrl);
+
+            return (
+              <article
+                key={resource.id}
+                id={current?.slug ?? resource.id}
+                className="grid overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm sm:grid-cols-[180px_1fr]"
+              >
+                <Image
+                  src={resourceFallbackImage()}
+                  alt=""
+                  width={480}
+                  height={360}
+                  className="h-full min-h-44 w-full object-cover"
+                  loading="lazy"
+                  sizes="(max-width: 640px) 100vw, 180px"
+                />
+                <div className="p-5">
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-red-600">
+                    {resource.resourceType}
+                  </div>
+                  <h2 className="mt-3 text-xl font-semibold text-slate-950">
+                    {current?.title}
+                  </h2>
+                  <p className="mt-2 text-slate-600">{current?.summary}</p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {fileUrl ? (
+                      <a
+                        href={fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex text-sm font-bold text-red-700 underline-offset-4 hover:underline"
+                      >
+                        {locale === 'tr' ? 'Dosyayi indir' : 'Download file'}
+                      </a>
+                    ) : null}
+                    {resource.externalUrl ? (
+                      <a
+                        href={resource.externalUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex text-sm font-bold text-red-700 underline-offset-4 hover:underline"
+                      >
+                        {locale === 'tr' ? 'Kaynagi ac' : 'Open resource'}
+                      </a>
+                    ) : null}
+                    {current?.slug ? (
+                      <Link
+                        href={`/${locale}/resources/${current.slug}`}
+                        className="inline-flex text-sm font-bold text-red-700 underline-offset-4 hover:underline"
+                      >
+                        {locale === 'tr' ? 'Detaylari incele' : 'View details'}
+                      </Link>
+                    ) : null}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
     </main>
   );
 }

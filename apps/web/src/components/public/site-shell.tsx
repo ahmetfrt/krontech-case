@@ -9,6 +9,8 @@ type SiteShellProps = {
 
 const copy = {
   en: {
+    announcement:
+      'Recognized enterprise access security platform for critical operations.',
     contact: 'Contact',
     demo: 'Request Demo',
     admin: 'Admin',
@@ -18,6 +20,8 @@ const copy = {
       'Privileged access, secure remote operations, and identity governance for enterprise teams.',
   },
   tr: {
+    announcement:
+      'Kritik operasyonlar icin kurumsal erisim guvenligi platformu.',
     contact: 'Iletisim',
     demo: 'Demo Talep',
     admin: 'Yonetim',
@@ -38,7 +42,24 @@ export function SiteShell({ children, locale }: SiteShellProps) {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f5f7fa] text-slate-950">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-bold focus:text-slate-950 focus:shadow-lg"
+      >
+        {activeLocale === 'tr' ? 'Icerige gec' : 'Skip to content'}
+      </a>
       <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+        <div className="border-b border-slate-200 bg-slate-950 px-4 py-2 text-xs font-semibold text-white sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+            <span>{t.announcement}</span>
+            <Link
+              href={`/${activeLocale}/resources`}
+              className="shrink-0 text-[#9bd3ff] underline-offset-4 hover:underline"
+            >
+              {activeLocale === 'tr' ? 'Kaynaklari incele' : 'Explore resources'}
+            </Link>
+          </div>
+        </div>
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link
             href={`/${activeLocale}`}
@@ -51,16 +72,20 @@ export function SiteShell({ children, locale }: SiteShellProps) {
             <span>Krontech</span>
           </Link>
 
-          <nav className="hidden items-center gap-5 text-sm font-medium text-slate-700 lg:flex">
+          <nav
+            aria-label={activeLocale === 'tr' ? 'Ana navigasyon' : 'Main navigation'}
+            className="hidden items-center gap-5 text-sm font-medium text-slate-700 lg:flex"
+          >
             {publicNavigation.map((group) => (
               <div key={group.href} className="group relative">
                 <Link
                   href={localizedHref(activeLocale, group.href)}
                   className="inline-flex h-16 items-center transition hover:text-[#d71920]"
+                  aria-haspopup="true"
                 >
                   {group.label[activeLocale]}
                 </Link>
-                <div className="invisible absolute left-1/2 top-full z-50 w-[720px] max-w-[calc(100vw-48px)] -translate-x-1/2 border border-slate-200 bg-white p-5 opacity-0 shadow-xl transition group-hover:visible group-hover:opacity-100">
+                <div className="invisible absolute left-1/2 top-full z-50 w-[720px] max-w-[calc(100vw-48px)] -translate-x-1/2 border border-slate-200 bg-white p-5 opacity-0 shadow-xl transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
                   <div className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-red-600">
                     {group.label[activeLocale]}
                   </div>
@@ -109,7 +134,12 @@ export function SiteShell({ children, locale }: SiteShellProps) {
             </Link>
           </div>
         </div>
-        <nav className="mx-auto flex w-full max-w-7xl gap-3 overflow-x-auto px-4 pb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600 sm:px-6 lg:hidden lg:px-8">
+        <nav
+          aria-label={
+            activeLocale === 'tr' ? 'Mobil navigasyon' : 'Mobile navigation'
+          }
+          className="mx-auto flex w-full max-w-7xl gap-3 overflow-x-auto px-4 pb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600 sm:px-6 lg:hidden lg:px-8"
+        >
           {publicNavigation.map((group) => (
             <Link
               key={group.href}
@@ -134,12 +164,19 @@ export function SiteShell({ children, locale }: SiteShellProps) {
         </nav>
       </header>
 
-      <div className="flex-1">{children}</div>
+      <div id="main-content" className="flex-1" tabIndex={-1}>
+        {children}
+      </div>
 
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 text-sm text-slate-600 sm:px-6 md:grid-cols-[1fr_auto] lg:px-8">
           <p>{t.footer}</p>
-          <div className="flex flex-wrap gap-4 font-medium text-slate-800">
+          <nav
+            aria-label={
+              activeLocale === 'tr' ? 'Alt navigasyon' : 'Footer navigation'
+            }
+            className="flex flex-wrap gap-4 font-medium text-slate-800"
+          >
             {publicNavigation.map((group) => (
               <Link
                 key={group.href}
@@ -161,7 +198,7 @@ export function SiteShell({ children, locale }: SiteShellProps) {
             >
               {t.contact}
             </Link>
-          </div>
+          </nav>
         </div>
       </footer>
     </div>

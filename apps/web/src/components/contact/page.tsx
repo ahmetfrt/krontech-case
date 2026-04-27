@@ -163,7 +163,15 @@ export default function ContactPage({
         </form>
       ) : null}
 
-      {status ? <p className="max-w-xl text-sm text-gray-700">{status}</p> : null}
+      {status ? (
+        <p
+          className="max-w-xl text-sm text-gray-700"
+          role="status"
+          aria-live="polite"
+        >
+          {status}
+        </p>
+      ) : null}
     </main>
   );
 }

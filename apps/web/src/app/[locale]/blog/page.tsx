@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { JsonLd } from '@/components/seo/json-ld';
 import { getPublishedBlogList } from '@/lib/blog';
 import { normalizeApiLocale } from '@/lib/i18n';
-import { resolveMediaUrl } from '@/lib/media';
+import { blogFallbackImage, resolveMediaUrl } from '@/lib/media';
 import {
   breadcrumbJsonLd,
   buildAbsoluteUrl,
@@ -84,7 +84,7 @@ export default async function BlogListPage({
     .filter((item): item is { name: string; url: string } => Boolean(item));
 
   return (
-    <main className="p-8 space-y-6">
+    <main className="bg-white px-4 py-12 sm:px-6 lg:px-8">
       <JsonLd
         data={collectionPageJsonLd({
           name: 'Blog',
@@ -101,45 +101,62 @@ export default async function BlogListPage({
         ])}
       />
 
-      <h1 className="text-3xl font-bold">
-        {locale === 'tr' ? 'Blog' : 'Blog'}
-      </h1>
+      <div className="mx-auto max-w-7xl">
+        <header className="max-w-3xl">
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-red-600">
+            {locale === 'tr' ? 'Icerikler' : 'Insights'}
+          </p>
+          <h1 className="mt-4 text-4xl font-bold text-slate-950">Blog</h1>
+          <p className="mt-4 text-lg leading-8 text-slate-600">
+            {pageDescription}
+          </p>
+        </header>
 
-      <div className="space-y-4">
-        {posts.map((post) => {
-          const current = post.translations.find(
-            (translation) => translation.locale === apiLocale,
-          );
-          const imageUrl = resolveMediaUrl(post.featuredImage?.publicUrl);
+        <div className="mt-10 space-y-4">
+          {posts.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-300 p-8 text-slate-600">
+              {locale === 'tr'
+                ? 'Yayinda blog yazisi bulunamadi.'
+                : 'No published blog posts yet.'}
+            </div>
+          ) : null}
 
-          return (
-            <article
-              key={post.id}
-              className="grid overflow-hidden rounded-lg border border-gray-200 bg-white md:grid-cols-[280px_1fr]"
-            >
-              {imageUrl ? (
+          {posts.map((post) => {
+            const current = post.translations.find(
+              (translation) => translation.locale === apiLocale,
+            );
+            const imageUrl =
+              resolveMediaUrl(post.featuredImage?.publicUrl) ||
+              blogFallbackImage();
+
+            return (
+              <article
+                key={post.id}
+                className="grid overflow-hidden rounded-lg border border-gray-200 bg-white md:grid-cols-[280px_1fr]"
+              >
                 <Image
                   src={imageUrl}
                   alt={current?.title || 'Blog image'}
                   width={560}
                   height={360}
                   className="h-full min-h-56 w-full object-cover"
+                  loading="lazy"
                   sizes="(max-width: 768px) 100vw, 280px"
                 />
-              ) : null}
-              <div className="p-5">
-                <h2 className="text-xl font-semibold">{current?.title}</h2>
-                <p className="mt-2 text-gray-600">{current?.excerpt}</p>
-                <Link
-                  href={`/${locale}/blog/${current?.slug}`}
-                  className="mt-4 inline-block text-blue-600 underline"
-                >
-                  {locale === 'tr' ? 'Devamını oku' : 'Read more'}
-                </Link>
-              </div>
-            </article>
-          );
-        })}
+                <div className="p-5">
+                  <h2 className="text-xl font-semibold">{current?.title}</h2>
+                  <p className="mt-2 text-gray-600">{current?.excerpt}</p>
+                  <Link
+                    href={`/${locale}/blog/${current?.slug}`}
+                    className="mt-4 inline-block text-blue-600 underline"
+                  >
+                    {locale === 'tr' ? 'Devamini oku' : 'Read more'}
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </div>
     </main>
   );

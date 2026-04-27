@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { JsonLd } from '@/components/seo/json-ld';
 import { getPublishedPage } from '@/lib/api';
 import {
@@ -318,83 +319,36 @@ export default async function LocalizedHomePage({
             </div>
           </div>
 
-          <div className="relative min-h-[420px] rounded-lg border border-white/10 bg-[#0c1a2f] p-4 shadow-2xl shadow-black/30">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-[#9bd3ff]">
-                  {t.operations}
-                </p>
-                <p className="mt-1 text-lg font-semibold text-white">
-                  Access Command Center
-                </p>
-              </div>
-              <span className="rounded-md bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                Online
-              </span>
-            </div>
-
-            <div className="mt-5 grid gap-4 sm:grid-cols-3">
-              {['Sessions', 'Approvals', 'Alerts'].map((label, index) => (
-                <div
-                  key={label}
-                  className="rounded-md border border-white/10 bg-white/[0.04] p-4"
-                >
-                  <p className="text-xs text-slate-400">{label}</p>
-                  <p className="mt-2 text-2xl font-semibold text-white">
-                    {[128, 42, 7][index]}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 rounded-md border border-white/10 bg-[#081221] p-4">
-              <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm font-semibold text-white">
-                  Privileged session flow
-                </p>
-                <span className="text-xs font-semibold text-[#9bd3ff]">
-                  Verified
-                </span>
-              </div>
-              <div className="space-y-3">
-                {[
-                  ['Identity check', 'complete', '100%'],
-                  ['Policy approval', 'active', '78%'],
-                  ['Session recording', 'running', '64%'],
-                  ['Audit evidence', 'indexed', '92%'],
-                ].map(([label, state, width]) => (
-                  <div key={label}>
-                    <div className="mb-1 flex items-center justify-between text-xs text-slate-300">
-                      <span>{label}</span>
-                      <span>{state}</span>
-                    </div>
-                    <div className="h-2 rounded-sm bg-white/10">
-                      <div
-                        className="h-2 rounded-sm bg-[#d71920]"
-                        style={{ width }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-3 text-sm text-slate-300">
-              {[
-                'Root access request approved by policy',
-                'Database session recorded and indexed',
-                'Anomalous login challenged with step-up control',
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-3 rounded-md border border-white/10 bg-white/[0.04] px-4 py-3"
-                >
-                  <span className="size-2 rounded-sm bg-[#d71920]" />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <figure className="relative overflow-hidden rounded-lg border border-white/10 bg-[#0c1a2f] shadow-2xl shadow-black/30">
+            <picture>
+              <source
+                srcSet="/images/kron-access-command.avif"
+                type="image/avif"
+              />
+              <source
+                srcSet="/images/kron-access-command.webp"
+                type="image/webp"
+              />
+              <Image
+                src="/images/kron-access-command.webp"
+                alt={
+                  activeLocale === 'tr'
+                    ? 'Krontech erisim operasyonlari komuta merkezi ekran gorseli'
+                    : 'Krontech access operations command center visual'
+                }
+                width={1600}
+                height={1000}
+                className="h-full min-h-[360px] w-full object-cover"
+                priority
+                sizes="(max-width: 1024px) 100vw, 48vw"
+              />
+            </picture>
+            <figcaption className="sr-only">
+              {activeLocale === 'tr'
+                ? 'Yetkili oturum, onay ve denetim kaniti metriklerini gosterir.'
+                : 'Shows privileged session, approval and audit evidence metrics.'}
+            </figcaption>
+          </figure>
         </div>
       </section>
 

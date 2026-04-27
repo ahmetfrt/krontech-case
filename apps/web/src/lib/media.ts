@@ -4,5 +4,13 @@ export function resolveMediaUrl(publicUrl?: string | null) {
 }
 
 export function fallbackImage() {
-  return 'https://placehold.co/1200x800?text=No+Image';
+  return '/images/kron-product-fallback.webp';
+}
+
+export function resourceFallbackImage() {
+  return '/images/kron-resource-library.webp';
+}
+
+export function blogFallbackImage() {
+  return '/images/kron-blog-fallback.webp';
 }

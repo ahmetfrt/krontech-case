@@ -68,6 +68,7 @@ Important API/web env split:
 ## Site analysis and content model
 
 The implementation mirrors the current Krontech public structure with bilingual routes and CMS-owned content.
+Detailed cross-reference notes are available in `docs/site-analysis.md`.
 
 Primary page inventory:
 
@@ -135,6 +136,13 @@ docker compose config
 - CAPTCHA is intentionally not included for the case scope; public forms use honeypot, throttling and server-side field validation.
 - Swagger/OpenAPI is exposed at `/docs`; request throttling is enabled globally in the NestJS API.
 
+## Form spam protection
+
+- Public form submissions pass through the global NestJS throttler (`20` requests per minute per client by default).
+- The public form renderer submits a hidden honeypot field; non-empty honeypot submissions are rejected as spam.
+- Server-side validation rejects unknown fields, missing required fields, invalid email values, invalid select options and missing consent.
+- CAPTCHA is not enabled; this is intentional for the local case demo and is documented as a tradeoff.
+
 ## SEO/GEO coverage
 
 - Metadata supports canonical URLs, localized alternates, robots index/follow flags and Open Graph/Twitter fallbacks.
@@ -142,6 +150,13 @@ docker compose config
 - FAQ-style page blocks emit schema.org `FAQPage` JSON-LD when question/answer data exists.
 - `sitemap.xml`, `robots.txt` and `llms.txt` cover seeded public routes and dynamic content.
 - Redirect rules preserve legacy URL transitions and are manageable from `/admin/redirects`.
+
+## Performance and accessibility
+
+- Next.js image optimization is configured for AVIF/WebP output.
+- Local WebP/AVIF visual assets live in `apps/web/public/images` and can be regenerated with `node scripts/generate-web-assets.cjs`.
+- Public navigation includes skip-link, labelled nav regions and keyboard-visible focus states.
+- See `docs/performance-accessibility-audit.md` for the closure checklist and Lighthouse handoff note.
 
 ## Test strategy
 

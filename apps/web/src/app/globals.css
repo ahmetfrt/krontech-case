@@ -21,3 +21,12 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+:focus-visible {
+  outline: 3px solid #d71920;
+  outline-offset: 3px;
+}
+
+img {
+  max-width: 100%;
+}

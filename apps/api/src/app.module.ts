@@ -22,7 +22,6 @@ import { CacheModule } from './cache/cache.module';
 import { RevalidateModule } from './revalidate/revalidate.module';
 import { AuditModule } from './audit/audit.module';
 
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -34,7 +33,7 @@ import { AuditModule } from './audit/audit.module';
         ttl: 60000,
         limit: 20,
       },
-]),
+    ]),
     PrismaModule,
     UsersModule,
     AuthModule,

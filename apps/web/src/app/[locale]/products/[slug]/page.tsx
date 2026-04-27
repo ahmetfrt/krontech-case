@@ -10,7 +10,6 @@ import { normalizeApiLocale } from '@/lib/i18n';
 import Image from 'next/image';
 import { fallbackImage, resolveMediaUrl } from '@/lib/media';
 
-
 export async function generateMetadata({
   params,
 }: {
@@ -81,7 +80,6 @@ export default async function ProductDetailPage({
           },
         ])}
       />
-
 
       <div className="overflow-hidden rounded-2xl border">
         <Image
