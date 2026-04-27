@@ -24,6 +24,9 @@ Demo URLs:
 - API health: http://localhost:3001/health
 - Swagger: http://localhost:3001/docs
 - MinIO console: http://localhost:9001
+- Contact: http://localhost:3000/en/contact
+- Demo request: http://localhost:3000/en/demo-request
+- Resource category examples: http://localhost:3000/en/resources/datasheets and http://localhost:3000/en/resources/case-studies
 
 Demo login:
 
@@ -62,6 +65,37 @@ Important API/web env split:
 - Server/container calls use `API_INTERNAL_URL` such as `http://api:3001`.
 - Publish revalidation uses `NEXT_REVALIDATE_BASE_URL` and `NEXT_REVALIDATE_SECRET`.
 
+## Site analysis and content model
+
+The implementation mirrors the current Krontech public structure with bilingual routes and CMS-owned content.
+
+Primary page inventory:
+
+- Home: `/tr`, `/en`
+- Products: `/tr/products`, `/en/products`, product detail pages such as `/en/products/kron-pam`
+- Solutions: `/en/solutions/*`, `/tr/solutions/*`
+- Partners: `/en/partners`, `/tr/partners`
+- Resources: `/en/resources`, `/tr/resources`, category pages such as `/en/resources/datasheets`, resource detail pages such as `/en/resources/critical-access-security-guide`
+- Blog: `/en/blog`, `/tr/blog`, blog detail pages
+- About: `/en/about-us/*`, `/tr/about-us/*`
+- Forms: `/en/contact`, `/tr/contact`, `/en/demo-request`, `/tr/demo-request`
+
+CMS content model:
+
+- `Page` + `PageTranslation` + sortable `PageBlock` records for standard pages, home sections, solution/about/category pages and SEO/GEO metadata.
+- `Product`, `BlogPost` and `Resource` entities with localized translations, publish status, scheduled publish date, version snapshots and structured data JSON.
+- `MediaAsset` records stored in MinIO/S3-compatible object storage and reused by content editors.
+- `FormDefinition`, `FormField` and `FormSubmission` records for contact/demo forms, validation, consent, submissions, CSV export and optional webhook forwarding.
+- `RedirectRule`, `AuditLog` and `ContentVersion` support URL migration, editorial traceability and rollback.
+
+Frontend component structure:
+
+- Public shell/navigation: `apps/web/src/components/public` and `apps/web/src/lib/navigation.ts`
+- SEO helpers and JSON-LD: `apps/web/src/lib/seo.ts`, `apps/web/src/components/seo`
+- CMS-backed route renderers: `apps/web/src/app/[locale]`
+- Admin workspaces: `apps/web/src/app/admin`
+- API clients and typed payloads: `apps/web/src/lib`
+
 ## Test commands
 
 API:
@@ -93,18 +127,28 @@ docker compose config
 ## Architecture notes
 
 - Public rendering is CMS-backed where possible: pages, products, blog, resources, contact form definitions and SEO metadata come from the API.
+- The public app uses SSR/ISR through Next.js server components and `fetch(..., { next: { revalidate } })`.
 - Admin content workflows support `DRAFT`, `SCHEDULED` and `PUBLISHED`; publishing clears Redis cache and calls the Next.js revalidate endpoint.
 - Role-based access uses JWT plus `ADMIN`/`EDITOR` guards. Editors can manage content drafts; admin-only operations include publish, restore, redirects and audit logs.
 - Redis is used for public content cache. Prefix invalidation uses scan-based deletion rather than blocking `KEYS`.
 - MinIO provides S3-compatible media uploads. Public URLs are built from `MINIO_PUBLIC_URL`.
 - CAPTCHA is intentionally not included for the case scope; public forms use honeypot, throttling and server-side field validation.
+- Swagger/OpenAPI is exposed at `/docs`; request throttling is enabled globally in the NestJS API.
 
 ## SEO/GEO coverage
 
 - Metadata supports canonical URLs, localized alternates, robots index/follow flags and Open Graph/Twitter fallbacks.
 - Product, blog, resource and generic CMS pages can store structured data JSON.
+- FAQ-style page blocks emit schema.org `FAQPage` JSON-LD when question/answer data exists.
 - `sitemap.xml`, `robots.txt` and `llms.txt` cover seeded public routes and dynamic content.
 - Redirect rules preserve legacy URL transitions and are manageable from `/admin/redirects`.
+
+## Test strategy
+
+- API unit tests use Jest for service/controller behavior and validation logic.
+- API e2e tests use Jest + Supertest against the NestJS HTTP layer for auth, protected admin access, public content, form submit/export, redirects and publish/revalidate behavior.
+- Prisma is exercised through the application test module where endpoint behavior depends on persistence.
+- Web verification uses TypeScript and `next build`; no separate browser test runner is introduced for this case scope.
 
 ## Delivery notes
 
@@ -112,3 +156,4 @@ docker compose config
 - For production, move secrets to a managed secret store, run migrations as a deployment step, use managed PostgreSQL/Redis/S3-compatible storage, and add centralized request/error logging.
 - Horizontal web/API scaling is stateless except for PostgreSQL, Redis and object storage. Scheduled publishing should run as a single scheduler instance or be coordinated with a distributed lock in a larger deployment.
 - AI assistance was used to accelerate implementation, cross-check requirements, improve tests and harden documentation. Final behavior is verified with local TypeScript/build/test commands.
+- The PDF also asks for meaningful commit history and a presentation/live demo. Those are delivery artifacts outside the application code: keep commits readable and prepare a short demo script using the URLs and credentials above.

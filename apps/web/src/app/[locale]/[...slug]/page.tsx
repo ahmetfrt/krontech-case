@@ -6,6 +6,7 @@ import { normalizeApiLocale } from '@/lib/i18n';
 import {
   breadcrumbJsonLd,
   buildMetadata,
+  faqJsonLd,
   webPageJsonLd,
 } from '@/lib/seo';
 
@@ -48,7 +49,7 @@ function readString(record: BlockRecord, keys: string[]) {
   return undefined;
 }
 
-function readItems(record: BlockRecord) {
+function readItems(record: BlockRecord, locale: 'en' | 'tr' = 'en') {
   const value = record.items;
 
   if (!Array.isArray(value)) {
@@ -58,8 +59,30 @@ function readItems(record: BlockRecord) {
   return value
     .map((item) => asRecord(item))
     .map((item) => ({
-      title: readString(item, ['title', 'name']),
-      text: readString(item, ['text', 'summary', 'description']),
+      title: readString(
+        item,
+        locale === 'tr'
+          ? ['trTitle', 'title', 'name', 'question']
+          : ['title', 'name', 'question'],
+      ),
+      text: readString(
+        item,
+        locale === 'tr'
+          ? ['trText', 'text', 'summary', 'description', 'answer']
+          : ['text', 'summary', 'description', 'answer'],
+      ),
+      question: readString(
+        item,
+        locale === 'tr'
+          ? ['trQuestion', 'question', 'title', 'name']
+          : ['question', 'title', 'name'],
+      ),
+      answer: readString(
+        item,
+        locale === 'tr'
+          ? ['trAnswer', 'answer', 'text', 'summary', 'description']
+          : ['answer', 'text', 'summary', 'description'],
+      ),
     }))
     .filter((item) => item.title || item.text);
 }
@@ -131,10 +154,21 @@ export default async function CmsStandardPage({ params }: PageProps) {
       path,
       locale: activeLocale,
     });
+  const faqItems = (page.blocks ?? [])
+    .filter((block) => block.type?.toLowerCase() === 'faq')
+    .flatMap((block) => readItems(asRecord(block.configJson)))
+    .reduce<{ answer: string; question: string }[]>((items, item) => {
+      if (item.question && item.answer) {
+        items.push({ answer: item.answer, question: item.question });
+      }
+
+      return items;
+    }, []);
 
   return (
     <main className="bg-white">
       <JsonLd data={jsonLd} />
+      {faqItems.length > 0 ? <JsonLd data={faqJsonLd(faqItems)} /> : null}
       <JsonLd
         data={breadcrumbJsonLd([
           { name: activeLocale === 'tr' ? 'Ana sayfa' : 'Home', path: `/${activeLocale}` },
@@ -162,16 +196,21 @@ export default async function CmsStandardPage({ params }: PageProps) {
         <div className="mx-auto grid max-w-5xl gap-6">
           {(page.blocks ?? []).map((block, index) => {
             const config = asRecord(block.configJson);
-            const title = readString(config, ['title', 'heading', 'name']);
-            const text = readString(config, [
-              'text',
-              'summary',
-              'description',
-              'body',
-            ]);
+            const title = readString(
+              config,
+              activeLocale === 'tr'
+                ? ['trTitle', 'title', 'heading', 'name']
+                : ['title', 'heading', 'name'],
+            );
+            const text = readString(
+              config,
+              activeLocale === 'tr'
+                ? ['trText', 'text', 'summary', 'description', 'body']
+                : ['text', 'summary', 'description', 'body'],
+            );
             const ctaLabel = readString(config, ['ctaLabel', 'buttonLabel']);
             const ctaHref = readString(config, ['ctaHref', 'href', 'url']);
-            const items = readItems(config);
+            const items = readItems(config, activeLocale);
 
             if (!title && !text && items.length === 0) {
               return null;

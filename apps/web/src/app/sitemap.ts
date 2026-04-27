@@ -120,6 +120,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: buildAbsoluteUrl('/en/resources'), lastModified: new Date() },
     { url: buildAbsoluteUrl('/tr/contact'), lastModified: new Date() },
     { url: buildAbsoluteUrl('/en/contact'), lastModified: new Date() },
+    { url: buildAbsoluteUrl('/tr/demo-request'), lastModified: new Date() },
+    { url: buildAbsoluteUrl('/en/demo-request'), lastModified: new Date() },
   ];
 
   const trBlogRoutes = localizedRoutes(

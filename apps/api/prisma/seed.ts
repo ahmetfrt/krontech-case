@@ -135,7 +135,15 @@ async function seedForms() {
       ],
     ],
     selectOptions: {
-      product: ['Kron PAM', 'Kron SRA', 'Kron IGA'],
+      product: [
+        'Kron PAM',
+        'Cloud PAM',
+        'Password Vault',
+        'Secure Remote Access',
+        'Telemetry Pipeline',
+        'Dynamic Data Masking',
+        'AAA Server',
+      ],
     },
   });
 }
@@ -279,6 +287,25 @@ async function seedPages() {
           ],
         },
       },
+      {
+        type: 'faq',
+        sortOrder: 1,
+        configJson: {
+          title: 'Frequently asked questions',
+          items: [
+            {
+              question: 'How does Kron reduce privileged access risk?',
+              answer:
+                'Kron combines credential vaulting, session control, approval workflows and audit evidence in one managed access security model.',
+            },
+            {
+              question: 'Which cache layers are affected by publishing?',
+              answer:
+                'Publishing invalidates Redis content cache and calls Next.js revalidation for list, detail and CMS page routes.',
+            },
+          ],
+        },
+      },
     ],
   });
 
@@ -343,6 +370,291 @@ async function seedPages() {
       },
     ],
   });
+
+  const standardPages = [
+    {
+      enSummary:
+        'Deliver privileged access management as a managed service with repeatable controls and clear audit evidence.',
+      enTitle: 'PAM as a Service',
+      slug: 'pam-as-a-service',
+      trSummary:
+        'Ayricalikli erisim yonetimini tekrarlanabilir kontroller ve net denetim kanitiyla yonetilen servis olarak sunun.',
+      trTitle: 'Servis Olarak PAM',
+    },
+    {
+      enSummary:
+        'Give operations teams controlled access to sensitive systems without exposing the network.',
+      enTitle: 'Secure Remote Access',
+      slug: 'secure-remote-access',
+      trSummary:
+        'Operasyon ekiplerine agi aciga cikarmadan hassas sistemlere kontrollu erisim verin.',
+      trTitle: 'Guvenli Uzaktan Erisim',
+    },
+    {
+      enSummary:
+        'Detect, control and investigate risky privileged behavior before it becomes a business incident.',
+      enTitle: 'Insider Threat Protection',
+      slug: 'insider-threat-protection',
+      trSummary:
+        'Riskli ayricalikli davranislari is olayina donusmeden tespit edin, kontrol edin ve inceleyin.',
+      trTitle: 'Ic Tehdit Korumasi',
+    },
+    {
+      enSummary:
+        'Apply least privilege policies to administrators, operators and machine identities.',
+      enTitle: 'Zero Trust and Least Privilege',
+      slug: 'zero-trust-and-least-privilege',
+      trSummary:
+        'Yoneticiler, operatorler ve makine kimlikleri icin least privilege politikalarini uygulayin.',
+      trTitle: 'Zero Trust ve Least Privilege',
+    },
+    {
+      enSummary:
+        'Turn privileged access activity into searchable evidence for compliance and security reviews.',
+      enTitle: 'Audit and Regulatory Compliance',
+      slug: 'audit-and-regulatory-compliance',
+      trSummary:
+        'Ayricalikli erisim aktivitelerini uyumluluk ve guvenlik incelemeleri icin aranabilir kanita donusturun.',
+      trTitle: 'Denetim ve Regulasyon Uyumlulugu',
+    },
+    {
+      enSummary:
+        'Protect distributed IoT and POS environments with centralized access and policy controls.',
+      enTitle: 'Network Access Control for IoT/POS Systems',
+      slug: 'network-access-control-for-iot-pos-systems',
+      trSummary:
+        'Dagitik IoT ve POS ortamlarini merkezi erisim ve politika kontrolleriyle koruyun.',
+      trTitle: 'IoT/POS Icin Ag Erisim Kontrolu',
+    },
+    {
+      enSummary:
+        'Automate access provisioning workflows while keeping governance and auditability intact.',
+      enTitle: 'Security Provisioning',
+      slug: 'security-provisioning',
+      trSummary:
+        'Erisim provisioning akislarini yonetisim ve denetlenebilirligi koruyarak otomatiklestirin.',
+      trTitle: 'Guvenlik Provisioning',
+    },
+    {
+      enSummary:
+        'Secure privileged operations in industrial and OT environments with controlled session access.',
+      enTitle: 'OT Security with Kron PAM',
+      slug: 'ot-security-with-kron-pam',
+      trSummary:
+        'Endustriyel ve OT ortamlarindaki ayricalikli operasyonlari kontrollu oturum erisimiyle guvenceye alin.',
+      trTitle: 'Kron PAM ile OT Guvenligi',
+    },
+    {
+      enSummary:
+        'Move authentication, authorization and accounting workflows to Kron AAA with controlled migration steps.',
+      enTitle: 'Replace Cisco CPAR with Kron AAA',
+      slug: 'replace-cisco-cpar-with-kron-aaa',
+      trSummary:
+        'Kimlik dogrulama, yetkilendirme ve muhasebe akislarini kontrollu gecis adimlariyla Kron AAA uzerine tasiyin.',
+      trTitle: 'Cisco CPAR Yerine Kron AAA',
+    },
+    {
+      enSummary:
+        'Retain and query telecom data at scale with operationally efficient storage patterns.',
+      enTitle: 'Petabyte-Scale Telco Data Retention',
+      slug: 'petabyte-scale-telco-data-retention',
+      trSummary:
+        'Telekom verisini operasyonel olarak verimli saklama desenleriyle petabyte olceginde saklayin ve sorgulayin.',
+      trTitle: 'Petabyte Olceginde Telco Veri Saklama',
+    },
+    {
+      enSummary:
+        'Automate provisioning and activation flows for broadband access services.',
+      enTitle: 'GPON Provisioning & Service Activation',
+      slug: 'gpon-provisioning-service-activation',
+      trSummary:
+        'Genisbant erisim servisleri icin provisioning ve aktivasyon akislarini otomatiklestirin.',
+      trTitle: 'GPON Provisioning ve Servis Aktivasyonu',
+    },
+    {
+      enSummary:
+        'Optimize log pipelines and reduce data volume without losing security context.',
+      enTitle: 'Reduce Log Volume',
+      slug: 'reduce-log-volume',
+      trSummary:
+        'Guvenlik baglamini kaybetmeden log pipeline yapilarini optimize edin ve veri hacmini azaltin.',
+      trTitle: 'Log Hacmini Azaltma',
+    },
+    {
+      enSummary:
+        'Restore archived security and observability data into usable investigation workflows.',
+      enTitle: 'Data Rehydration',
+      slug: 'data-rehydration',
+      trSummary:
+        'Arsivlenmis guvenlik ve gozlemlenebilirlik verisini kullanilabilir inceleme akislarina geri kazandirin.',
+      trTitle: 'Veri Rehidrasyonu',
+    },
+    {
+      enSummary:
+        'Manage security data collection, routing and retention with scalable operational controls.',
+      enTitle: 'Security Data Management',
+      slug: 'security-data-management',
+      trSummary:
+        'Guvenlik verisi toplama, yonlendirme ve saklama sureclerini olceklenebilir operasyonel kontrollerle yonetin.',
+      trTitle: 'Guvenlik Verisi Yonetimi',
+    },
+  ] as const;
+
+  for (const page of standardPages) {
+    await upsertPage({
+      pageType: PageType.STANDARD,
+      translations: [
+        {
+          locale: Locale.TR,
+          title: page.trTitle,
+          slug: `solutions/${page.slug}`,
+          summary: page.trSummary,
+        },
+        {
+          locale: Locale.EN,
+          title: page.enTitle,
+          slug: `solutions/${page.slug}`,
+          summary: page.enSummary,
+        },
+      ],
+      blocks: [
+        standardContentBlock(page.enTitle, page.enSummary, {
+          trSummary: page.trSummary,
+          trTitle: page.trTitle,
+        }),
+      ],
+    });
+  }
+
+  const resourcePages = [
+    {
+      enSummary: 'Explore product datasheets and solution briefs.',
+      enTitle: 'Datasheets',
+      slug: 'datasheets',
+      trSummary: 'Urun datasheetlerini ve cozum ozetlerini inceleyin.',
+      trTitle: 'Datasheetler',
+    },
+    {
+      enSummary:
+        'Review examples of successful privileged access and security projects.',
+      enTitle: 'Case Studies',
+      slug: 'case-studies',
+      trSummary:
+        'Basarili ayricalikli erisim ve guvenlik projelerinden ornekleri inceleyin.',
+      trTitle: 'Basari Hikayeleri',
+    },
+    {
+      enSummary: 'Listen to expert conversations about access security.',
+      enTitle: 'Podcast',
+      slug: 'podcast',
+      trSummary: 'Erisim guvenligi hakkinda uzman sohbetlerini dinleyin.',
+      trTitle: 'Podcast',
+    },
+  ] as const;
+
+  for (const page of resourcePages) {
+    await upsertPage({
+      pageType: PageType.STANDARD,
+      translations: [
+        {
+          locale: Locale.TR,
+          title: page.trTitle,
+          slug: `resources/${page.slug}`,
+          summary: page.trSummary,
+        },
+        {
+          locale: Locale.EN,
+          title: page.enTitle,
+          slug: `resources/${page.slug}`,
+          summary: page.enSummary,
+        },
+      ],
+      blocks: [
+        standardContentBlock(page.enTitle, page.enSummary, {
+          trSummary: page.trSummary,
+          trTitle: page.trTitle,
+        }),
+      ],
+    });
+  }
+
+  const aboutPages = [
+    {
+      enSummary: 'Meet the leadership team behind Kron technology.',
+      enTitle: 'Management',
+      slug: 'management',
+      trSummary: 'Kron teknolojisinin arkasindaki liderlik ekibini taniyin.',
+      trTitle: 'Yonetim',
+    },
+    {
+      enSummary: 'Review the governance team setting long-term strategy.',
+      enTitle: 'Board of Directors',
+      slug: 'board-of-directors',
+      trSummary: 'Uzun vadeli stratejiyi belirleyen yonetim kurulunu inceleyin.',
+      trTitle: 'Yonetim Kurulu',
+    },
+    {
+      enSummary: 'Join teams building critical access security products.',
+      enTitle: 'Careers',
+      slug: 'careers',
+      trSummary: 'Kritik erisim guvenligi urunleri gelistiren ekiplere katilin.',
+      trTitle: 'Kariyer',
+    },
+    {
+      enSummary: 'Follow Kron news, releases and company updates.',
+      enTitle: 'Newsroom',
+      slug: 'newsroom',
+      trSummary: 'Kron haberlerini, duyurularini ve sirket guncellemelerini takip edin.',
+      trTitle: 'Haberler',
+    },
+    {
+      enSummary: 'Read the latest public announcements.',
+      enTitle: 'Announcements',
+      slug: 'announcements',
+      trSummary: 'En son kamuya acik duyurulari okuyun.',
+      trTitle: 'Duyurular',
+    },
+    {
+      enSummary: 'Access investor-facing information and company context.',
+      enTitle: 'Investor Relations',
+      slug: 'investor-relations',
+      trSummary: 'Yatirimcilara yonelik bilgilere ve sirket baglamina erisin.',
+      trTitle: 'Yatirimci Iliskileri',
+    },
+    {
+      enSummary: 'Review Kron brand and logo guidance.',
+      enTitle: 'Logo Guidelines',
+      slug: 'logo-guidelines',
+      trSummary: 'Kron marka ve logo kullanim rehberini inceleyin.',
+      trTitle: 'Logo Rehberi',
+    },
+  ] as const;
+
+  for (const page of aboutPages) {
+    await upsertPage({
+      pageType: PageType.STANDARD,
+      translations: [
+        {
+          locale: Locale.TR,
+          title: page.trTitle,
+          slug: `about-us/${page.slug}`,
+          summary: page.trSummary,
+        },
+        {
+          locale: Locale.EN,
+          title: page.enTitle,
+          slug: `about-us/${page.slug}`,
+          summary: page.enSummary,
+        },
+      ],
+      blocks: [
+        standardContentBlock(page.enTitle, page.enSummary, {
+          trSummary: page.trSummary,
+          trTitle: page.trTitle,
+        }),
+      ],
+    });
+  }
 }
 
 async function upsertPage(params: {
@@ -384,68 +696,216 @@ async function upsertPage(params: {
   });
 }
 
+function standardContentBlock(
+  title: string,
+  summary: string,
+  localized?: { trSummary: string; trTitle: string },
+): SeedBlock {
+  return {
+    type: 'content',
+    sortOrder: 0,
+    configJson: {
+      title,
+      text: summary,
+      ...(localized
+        ? {
+            trText: localized.trSummary,
+            trTitle: localized.trTitle,
+          }
+        : {}),
+      items: [
+        {
+          title: 'Managed in CMS',
+          trTitle: 'CMS ile yonetilir',
+          text: 'This page is seeded as CMS content and can be edited, scheduled, previewed and restored from the admin panel.',
+          trText:
+            'Bu sayfa CMS icerigi olarak seed edilir; admin panelinden duzenlenebilir, zamanlanabilir, onizlenebilir ve geri yuklenebilir.',
+        },
+        {
+          title: 'SEO and GEO ready',
+          trTitle: 'SEO ve GEO hazir',
+          text: 'Metadata, canonical fields, robots settings and structured content can be maintained per language.',
+          trText:
+            'Metadata, canonical alanlar, robots ayarlari ve yapilandirilmis icerik dil bazinda yonetilebilir.',
+        },
+      ],
+    },
+  };
+}
+
+function productSchema(
+  name: string,
+  description: string,
+  slug: string,
+): Prisma.InputJsonValue {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name,
+    description,
+    url: `https://krontech.com/products/${slug}`,
+    brand: {
+      '@type': 'Brand',
+      name: 'Krontech',
+    },
+  };
+}
+
 async function seedProducts() {
-  await upsertProduct({
-    productCode: 'kron-pam',
-    translations: [
-      {
-        locale: Locale.TR,
-        title: 'Kron PAM',
-        slug: 'kron-pam',
-        summary:
-          'Yetkili hesaplari, kasalari ve oturumlari tek merkezden yonetin.',
-        seoTitle: 'Kron PAM | Yetkili Erisim Yonetimi',
-      },
-      {
-        locale: Locale.EN,
-        title: 'Kron PAM',
-        slug: 'kron-pam',
-        summary:
-          'Manage privileged accounts, vaults and sessions from one control plane.',
-        seoTitle: 'Kron PAM | Privileged Access Management',
-      },
-    ],
-  });
+  const products = [
+    {
+      productCode: 'kron-pam',
+      title: 'Kron PAM',
+      enSummary:
+        'Protect privileged accounts, credentials and sessions with a centrally managed access security platform.',
+      trSummary:
+        'Ayricalikli hesaplari, kimlik bilgilerini ve oturumlari merkezi yonetilen erisim guvenligiyle koruyun.',
+    },
+    {
+      productCode: 'cloud-pam',
+      title: 'Cloud PAM',
+      enSummary:
+        'Deliver privileged access management from a SaaS-ready model for zero-trust access programs.',
+      trSummary:
+        'Zero trust erisim programlari icin ayricalikli erisim yonetimini SaaS hazir bir modelle sunun.',
+    },
+    {
+      productCode: 'password-vault',
+      title: 'Password Vault',
+      enSummary:
+        'Prevent sharing of privileged passwords with encrypted vaulting and controlled checkout workflows.',
+      trSummary:
+        'Ayricalikli parolalarin paylasilmasini sifreli kasa ve kontrollu teslim akislariyla onleyin.',
+    },
+    {
+      productCode: 'privileged-session-manager',
+      title: 'Privileged Session Manager',
+      enSummary:
+        'Monitor, record and control privileged sessions across critical infrastructure.',
+      trSummary:
+        'Kritik altyapilardaki ayricalikli oturumlari izleyin, kaydedin ve kontrol edin.',
+    },
+    {
+      productCode: 'database-access-manager',
+      title: 'Database Access Manager',
+      enSummary:
+        'Control database administrator access and produce detailed evidence for sensitive data activity.',
+      trSummary:
+        'Veritabani yoneticisi erisimini kontrol edin ve hassas veri aktiviteleri icin detayli kanit uretin.',
+    },
+    {
+      productCode: 'privileged-task-automation',
+      title: 'Privileged Task Automation',
+      enSummary:
+        'Automate privileged operational tasks while preserving policy control and auditability.',
+      trSummary:
+        'Ayricalikli operasyonel gorevleri politika kontrolu ve denetlenebilirlikten odun vermeden otomatiklestirin.',
+    },
+    {
+      productCode: 'endpoint-privilege-management',
+      title: 'Endpoint Privilege Management',
+      enSummary:
+        'Authorize applications and commands on endpoints with least privilege controls.',
+      trSummary:
+        'Endpoint uzerindeki uygulama ve komutlari least privilege kontrolleriyle yetkilendirin.',
+    },
+    {
+      productCode: 'user-behavior-analytics',
+      title: 'User Behavior Analytics',
+      enSummary:
+        'Detect risky internal activity with behavioral analytics and access context.',
+      trSummary:
+        'Riskli ic aktiviteleri davranis analitigi ve erisim baglami ile tespit edin.',
+    },
+    {
+      productCode: 'multi-factor-authentication',
+      title: 'Multi-Factor Authentication',
+      enSummary:
+        'Strengthen access flows with OTP, policy, location and time-based authentication controls.',
+      trSummary:
+        'OTP, politika, konum ve zaman tabanli kimlik dogrulama kontrolleriyle erisim akisini guclendirin.',
+    },
+    {
+      productCode: 'unified-access-manager',
+      title: 'Unified Access Manager',
+      enSummary:
+        'Use integrated TACACS+ and RADIUS services for network infrastructure access governance.',
+      trSummary:
+        'Ag altyapisi erisim yonetimi icin entegre TACACS+ ve RADIUS servislerini kullanin.',
+    },
+    {
+      productCode: 'aaa-server',
+      title: 'AAA Server',
+      enSummary:
+        'Manage authentication, authorization and accounting workflows for telecom-grade environments.',
+      trSummary:
+        'Telekom olcegindeki ortamlarda kimlik dogrulama, yetkilendirme ve muhasebe akisini yonetin.',
+    },
+    {
+      productCode: 'telemetry-pipeline',
+      title: 'Telemetry Pipeline',
+      enSummary:
+        'Process, route and store observability and security data streams with scalable pipeline controls.',
+      trSummary:
+        'Gozlemlenebilirlik ve guvenlik veri akisini olceklenebilir pipeline kontrolleriyle isleyin, yonlendirin ve saklayin.',
+    },
+    {
+      productCode: 'dynamic-data-masking',
+      title: 'Dynamic Data Masking',
+      enSummary:
+        'Mask sensitive data in database workflows to reduce exposure for privileged users.',
+      trSummary:
+        'Ayricalikli kullanicilarin maruziyetini azaltmak icin veritabani akislari icindeki hassas veriyi maskeleyin.',
+    },
+    {
+      productCode: 'ipdr-logging',
+      title: 'IPDR Logging',
+      enSummary:
+        'Collect and retain broadband subscriber network activity with a purpose-built logging platform.',
+      trSummary:
+        'Genisbant abone ag aktivitelerini amaca ozel loglama platformuyla toplayin ve saklayin.',
+    },
+    {
+      productCode: 'quality-assurance',
+      title: 'Quality Assurance',
+      enSummary:
+        'Increase service quality with distributed probing and fast detection of service interruptions.',
+      trSummary:
+        'Dagitik prob mimarisi ve hizli kesinti tespitiyle servis kalitesini artirin.',
+    },
+  ] as const;
 
-  await upsertProduct({
-    productCode: 'kron-sra',
-    translations: [
-      {
-        locale: Locale.TR,
-        title: 'Kron SRA',
-        slug: 'kron-sra',
-        summary:
-          'Operasyon ekiplerine agi aciga cikarmadan guvenli uzaktan erisim verin.',
-      },
-      {
-        locale: Locale.EN,
-        title: 'Kron SRA',
-        slug: 'kron-sra',
-        summary:
-          'Give operators secure remote access without exposing the network.',
-      },
-    ],
-  });
-
-  await upsertProduct({
-    productCode: 'kron-iga',
-    translations: [
-      {
-        locale: Locale.TR,
-        title: 'Kron IGA',
-        slug: 'kron-iga',
-        summary:
-          'Kimlik yasam dongusu, rol ve yetki sureclerini denetlenebilir hale getirin.',
-      },
-      {
-        locale: Locale.EN,
-        title: 'Kron IGA',
-        slug: 'kron-iga',
-        summary:
-          'Make identity lifecycle, role and entitlement processes auditable.',
-      },
-    ],
-  });
+  for (const product of products) {
+    await upsertProduct({
+      productCode: product.productCode,
+      translations: [
+        {
+          locale: Locale.TR,
+          title: product.title,
+          slug: product.productCode,
+          summary: product.trSummary,
+          seoTitle: `${product.title} | Krontech`,
+          structuredDataJson: productSchema(
+            product.title,
+            product.trSummary,
+            product.productCode,
+          ),
+        },
+        {
+          locale: Locale.EN,
+          title: product.title,
+          slug: product.productCode,
+          summary: product.enSummary,
+          seoTitle: `${product.title} | Krontech`,
+          structuredDataJson: productSchema(
+            product.title,
+            product.enSummary,
+            product.productCode,
+          ),
+        },
+      ],
+    });
+  }
 }
 
 async function upsertProduct(params: {
@@ -648,6 +1108,14 @@ async function seedRedirects() {
     ['/en/products.html', '/en/products', 301],
     ['/tr/kaynaklar', '/tr/resources', 301],
     ['/en/contact-us', '/en/contact', 301],
+    ['/tr/demo-talep', '/tr/demo-request', 301],
+    ['/en/request-demo', '/en/demo-request', 301],
+    ['/en/privileged-access-management', '/en/products/kron-pam', 301],
+    ['/tr/privileged-access-management', '/tr/products/kron-pam', 301],
+    ['/en/datasheets', '/en/resources/datasheets', 301],
+    ['/en/case-studies', '/en/resources/case-studies', 301],
+    ['/tr/datasheets', '/tr/resources/datasheets', 301],
+    ['/tr/case-studies', '/tr/resources/case-studies', 301],
   ] as const;
 
   for (const [sourcePath, targetPath, statusCode] of rules) {

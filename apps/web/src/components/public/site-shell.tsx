@@ -10,6 +10,7 @@ type SiteShellProps = {
 const copy = {
   en: {
     contact: 'Contact',
+    demo: 'Request Demo',
     admin: 'Admin',
     language: 'TR',
     languageHref: '/tr',
@@ -18,6 +19,7 @@ const copy = {
   },
   tr: {
     contact: 'Iletisim',
+    demo: 'Demo Talep',
     admin: 'Yonetim',
     language: 'EN',
     languageHref: '/en',
@@ -51,13 +53,32 @@ export function SiteShell({ children, locale }: SiteShellProps) {
 
           <nav className="hidden items-center gap-5 text-sm font-medium text-slate-700 lg:flex">
             {publicNavigation.map((group) => (
-              <Link
-                key={group.href}
-                href={localizedHref(activeLocale, group.href)}
-                className="transition hover:text-[#d71920]"
-              >
-                {group.label[activeLocale]}
-              </Link>
+              <div key={group.href} className="group relative">
+                <Link
+                  href={localizedHref(activeLocale, group.href)}
+                  className="inline-flex h-16 items-center transition hover:text-[#d71920]"
+                >
+                  {group.label[activeLocale]}
+                </Link>
+                <div className="invisible absolute left-1/2 top-full z-50 w-[720px] max-w-[calc(100vw-48px)] -translate-x-1/2 border border-slate-200 bg-white p-5 opacity-0 shadow-xl transition group-hover:visible group-hover:opacity-100">
+                  <div className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-red-600">
+                    {group.label[activeLocale]}
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.items.map((item, itemIndex) => (
+                      <Link
+                        key={`${item.href}-${itemIndex}`}
+                        href={localizedHref(activeLocale, item.href)}
+                        target={item.external ? '_blank' : undefined}
+                        rel={item.external ? 'noreferrer' : undefined}
+                        className="rounded-md px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 hover:text-[#d71920]"
+                      >
+                        {item.label[activeLocale]}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
             ))}
             <Link
               href={`/${activeLocale}/contact`}
@@ -73,6 +94,12 @@ export function SiteShell({ children, locale }: SiteShellProps) {
               className="grid h-9 min-w-10 place-items-center rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition hover:border-[#d71920] hover:text-[#d71920]"
             >
               {t.language}
+            </Link>
+            <Link
+              href={`/${activeLocale}/demo-request`}
+              className="hidden rounded-md border border-[#d71920] px-4 py-2 text-sm font-semibold text-[#d71920] transition hover:bg-[#d71920] hover:text-white md:inline-flex"
+            >
+              {t.demo}
             </Link>
             <Link
               href="/admin"
@@ -92,6 +119,12 @@ export function SiteShell({ children, locale }: SiteShellProps) {
               {group.label[activeLocale]}
             </Link>
           ))}
+          <Link
+            href={`/${activeLocale}/demo-request`}
+            className="shrink-0 rounded-md border border-slate-200 bg-white px-3 py-2"
+          >
+            {t.demo}
+          </Link>
           <Link
             href={`/${activeLocale}/contact`}
             className="shrink-0 rounded-md border border-slate-200 bg-white px-3 py-2"
@@ -116,6 +149,12 @@ export function SiteShell({ children, locale }: SiteShellProps) {
                 {group.label[activeLocale]}
               </Link>
             ))}
+            <Link
+              href={`/${activeLocale}/demo-request`}
+              className="hover:text-[#d71920]"
+            >
+              {t.demo}
+            </Link>
             <Link
               href={`/${activeLocale}/contact`}
               className="hover:text-[#d71920]"

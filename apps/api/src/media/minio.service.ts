@@ -1,6 +1,12 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CreateBucketCommand, HeadBucketCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  CreateBucketCommand,
+  HeadBucketCommand,
+  PutBucketPolicyCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 
 @Injectable()
 export class MinioService implements OnModuleInit {
@@ -45,6 +51,8 @@ export class MinioService implements OnModuleInit {
         }),
       );
     }
+
+    await this.ensurePublicReadPolicy();
   }
 
   async uploadObject(params: {
@@ -65,5 +73,24 @@ export class MinioService implements OnModuleInit {
       bucket: this.bucket,
       key: params.key,
     };
+  }
+
+  private async ensurePublicReadPolicy() {
+    await this.client.send(
+      new PutBucketPolicyCommand({
+        Bucket: this.bucket,
+        Policy: JSON.stringify({
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Effect: 'Allow',
+              Principal: '*',
+              Action: ['s3:GetObject'],
+              Resource: [`arn:aws:s3:::${this.bucket}/*`],
+            },
+          ],
+        }),
+      }),
+    );
   }
 }
