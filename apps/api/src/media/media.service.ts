@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MinioService } from './minio.service';
 
@@ -11,9 +12,10 @@ export class MediaService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly minioService: MinioService,
+    private readonly auditService: AuditService,
   ) {}
 
-  async upload(file: Express.Multer.File) {
+  async upload(file: Express.Multer.File, userId?: string) {
     const extension = file.originalname.includes('.')
       ? file.originalname.split('.').pop()
       : '';
@@ -32,6 +34,18 @@ export class MediaService {
         fileName: file.originalname,
         mimeType: file.mimetype,
         storageKey,
+      },
+    });
+
+    await this.auditService.log({
+      userId,
+      action: 'MEDIA_UPLOAD',
+      entityType: 'MEDIA_ASSET',
+      entityId: item.id,
+      metaJson: {
+        fileName: item.fileName,
+        mimeType: item.mimeType,
+        storageKey: item.storageKey,
       },
     });
 

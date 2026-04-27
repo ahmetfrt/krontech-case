@@ -7,6 +7,7 @@ import { VersionsService } from '../versions/versions.service';
 import { CacheService } from '../cache/cache.service';
 import { RevalidateService } from '../revalidate/revalidate.service';
 import { MediaService } from '../media/media.service';
+import { AuditService } from '../audit/audit.service';
 
 
 @Injectable()
@@ -17,9 +18,10 @@ export class ProductsService {
     private readonly cacheService: CacheService,
     private readonly revalidateService: RevalidateService,
     private readonly mediaService: MediaService,
+    private readonly auditService: AuditService,
   ) {}
 
-  async create(dto: CreateProductDto) {
+  async create(dto: CreateProductDto, userId?: string) {
     const product = await this.prisma.product.create({
       data: {
         productCode: dto.productCode,
@@ -32,6 +34,17 @@ export class ProductsService {
       include: {
         heroImage: true,
         translations: true,
+      },
+    });
+
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_CREATE',
+      entityType: 'PRODUCT',
+      entityId: product.id,
+      metaJson: {
+        productCode: product.productCode,
+        status: product.status,
       },
     });
 
@@ -66,13 +79,14 @@ export class ProductsService {
     return this.withMediaUrls(product);
   }
 
-  async update(id: string, dto: UpdateProductDto) {
+  async update(id: string, dto: UpdateProductDto, userId?: string) {
     const existing = await this.findOne(id);
 
     await this.versionsService.createVersion({
       entityType: 'PRODUCT',
       entityId: id,
       snapshotJson: existing as Prisma.InputJsonValue,
+      createdById: userId,
       note: 'Before product update',
     });
 
@@ -102,11 +116,22 @@ export class ProductsService {
     });
 
     await this.cacheService.delByPrefix('product:');
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_UPDATE',
+      entityType: 'PRODUCT',
+      entityId: updated.id,
+      metaJson: {
+        previousStatus: existing.status,
+        productCode: updated.productCode,
+        status: updated.status,
+      },
+    });
 
     return this.withMediaUrls(updated);
   }
 
-  async publish(id: string) {
+  async publish(id: string, userId?: string) {
     await this.findOne(id);
 
     const updated = await this.prisma.product.update({
@@ -114,6 +139,7 @@ export class ProductsService {
       data: {
         status: PublishStatus.PUBLISHED,
         publishedAt: new Date(),
+        scheduledAt: null,
       },
       include: {
         translations: true,
@@ -127,11 +153,24 @@ export class ProductsService {
     const en = updated.translations.find((t) => t.locale === 'EN');
 
     if (tr?.slug) {
+      await this.revalidateService.revalidatePath('/tr/products');
       await this.revalidateService.revalidatePath(`/tr/products/${tr.slug}`);
     }
     if (en?.slug) {
+      await this.revalidateService.revalidatePath('/en/products');
       await this.revalidateService.revalidatePath(`/en/products/${en.slug}`);
     }
+
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_PUBLISH',
+      entityType: 'PRODUCT',
+      entityId: updated.id,
+      metaJson: {
+        productCode: updated.productCode,
+        trigger: 'manual',
+      },
+    });
 
     return this.withMediaUrls(updated);
   }
@@ -218,7 +257,7 @@ export class ProductsService {
     return this.versionsService.listVersions('PRODUCT', id);
   }
   
-  async restoreVersion(id: string, versionId: string) {
+  async restoreVersion(id: string, versionId: string, userId?: string) {
     await this.findOne(id);
 
     const version = await this.versionsService.getVersion(versionId);
@@ -228,7 +267,7 @@ export class ProductsService {
       where: { productId: id },
     });
 
-    return this.prisma.product.update({
+    const restored = await this.prisma.product.update({
       where: { id },
       data: {
         productCode: snapshot.productCode,
@@ -256,6 +295,19 @@ export class ProductsService {
         heroImage: true,
       },
     });
+
+    await this.cacheService.delByPrefix('product:');
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_RESTORE',
+      entityType: 'PRODUCT',
+      entityId: restored.id,
+      metaJson: {
+        versionId,
+      },
+    });
+
+    return this.withMediaUrls(restored);
   }    
 
   private withMediaUrls<T extends { heroImage?: { storageKey: string } | null }>(

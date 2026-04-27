@@ -20,6 +20,7 @@ import { RedirectsModule } from './redirects/redirects.module';
 import { VersionsModule } from './versions/versions.module';
 import { CacheModule } from './cache/cache.module';
 import { RevalidateModule } from './revalidate/revalidate.module';
+import { AuditModule } from './audit/audit.module';
 
 
 @Module({
@@ -50,6 +51,7 @@ import { RevalidateModule } from './revalidate/revalidate.module';
     VersionsModule,
     CacheModule,
     RevalidateModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [

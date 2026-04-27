@@ -5,10 +5,15 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { RoleName } from '@prisma/client';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import type { AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import { BlogService } from './blog.service';
 import { CreateBlogPostDto } from './dto/create-blog-post.dto';
 import { UpdateBlogPostDto } from './dto/update-blog-post.dto';
@@ -16,14 +21,15 @@ import { RestoreVersionDto } from '../versions/dto/restore-version.dto';
 
 @ApiTags('blog')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(RoleName.ADMIN, RoleName.EDITOR)
 @Controller('blog')
 export class BlogController {
   constructor(private readonly blogService: BlogService) {}
 
   @Post()
-  create(@Body() body: CreateBlogPostDto) {
-    return this.blogService.create(body);
+  create(@Body() body: CreateBlogPostDto, @Req() req: AuthenticatedRequest) {
+    return this.blogService.create(body, req.user.id);
   }
 
   @Get()
@@ -37,13 +43,18 @@ export class BlogController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: UpdateBlogPostDto) {
-    return this.blogService.update(id, body);
+  update(
+    @Param('id') id: string,
+    @Body() body: UpdateBlogPostDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.blogService.update(id, body, req.user.id);
   }
 
   @Patch(':id/publish')
-  publish(@Param('id') id: string) {
-    return this.blogService.publish(id);
+  @Roles(RoleName.ADMIN)
+  publish(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.blogService.publish(id, req.user.id);
   }
 
   @Get(':id/versions')
@@ -52,10 +63,12 @@ export class BlogController {
   }
 
   @Post(':id/restore')
+  @Roles(RoleName.ADMIN)
   restoreVersion(
     @Param('id') id: string,
     @Body() body: RestoreVersionDto,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.blogService.restoreVersion(id, body.versionId);
+    return this.blogService.restoreVersion(id, body.versionId, req.user.id);
   }
 }

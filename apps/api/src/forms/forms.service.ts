@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { FieldType, FormType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateFormDto } from './dto/create-form.dto';
 import { SubmitFormDto } from './dto/submit-form.dto';
 import { UpdateFormDto } from './dto/update-form.dto';
@@ -19,10 +20,13 @@ type FormFieldForValidation = {
 
 @Injectable()
 export class FormsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
-  async create(dto: CreateFormDto) {
-    return this.prisma.formDefinition.create({
+  async create(dto: CreateFormDto, userId?: string) {
+    const form = await this.prisma.formDefinition.create({
       data: {
         name: dto.name,
         formType: dto.formType,
@@ -46,6 +50,20 @@ export class FormsService {
         },
       },
     });
+
+    await this.auditService.log({
+      userId,
+      action: 'FORM_CREATE',
+      entityType: 'FORM_DEFINITION',
+      entityId: form.id,
+      metaJson: {
+        formType: form.formType,
+        isActive: form.isActive,
+        name: form.name,
+      },
+    });
+
+    return form;
   }
 
   async findAll() {
@@ -79,8 +97,8 @@ export class FormsService {
     return form;
   }
 
-  async update(id: string, dto: UpdateFormDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdateFormDto, userId?: string) {
+    const existing = await this.findOne(id);
 
     if (dto.fields) {
       await this.prisma.formField.deleteMany({
@@ -88,7 +106,7 @@ export class FormsService {
       });
     }
 
-    return this.prisma.formDefinition.update({
+    const updated = await this.prisma.formDefinition.update({
       where: { id },
       data: {
         name: dto.name,
@@ -115,6 +133,21 @@ export class FormsService {
         },
       },
     });
+
+    await this.auditService.log({
+      userId,
+      action: 'FORM_UPDATE',
+      entityType: 'FORM_DEFINITION',
+      entityId: updated.id,
+      metaJson: {
+        formType: updated.formType,
+        isActive: updated.isActive,
+        name: updated.name,
+        previousIsActive: existing.isActive,
+      },
+    });
+
+    return updated;
   }
 
   async submit(formId: string, dto: SubmitFormDto) {

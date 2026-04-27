@@ -7,6 +7,7 @@ import { VersionsService } from '../versions/versions.service';
 import { CacheService } from '../cache/cache.service';
 import { RevalidateService } from '../revalidate/revalidate.service';
 import { MediaService } from '../media/media.service';
+import { AuditService } from '../audit/audit.service';
 
 
 @Injectable()
@@ -17,9 +18,10 @@ export class BlogService {
     private readonly cacheService: CacheService,
     private readonly revalidateService: RevalidateService,
     private readonly mediaService: MediaService,
+    private readonly auditService: AuditService,
   ) {}
 
-  async create(dto: CreateBlogPostDto) {
+  async create(dto: CreateBlogPostDto, userId?: string) {
     const post = await this.prisma.blogPost.create({
       data: {
         status: dto.status ?? PublishStatus.DRAFT,
@@ -32,6 +34,17 @@ export class BlogService {
       include: {
         translations: true,
         featuredImage: true,
+      },
+    });
+
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_CREATE',
+      entityType: 'BLOG_POST',
+      entityId: post.id,
+      metaJson: {
+        authorName: post.authorName,
+        status: post.status,
       },
     });
 
@@ -66,13 +79,14 @@ export class BlogService {
     return this.withMediaUrls(post);
   }
 
-  async update(id: string, dto: UpdateBlogPostDto) {
+  async update(id: string, dto: UpdateBlogPostDto, userId?: string) {
     const existing = await this.findOne(id);
 
     await this.versionsService.createVersion({
       entityType: 'BLOG_POST',
       entityId: id,
       snapshotJson: existing as Prisma.InputJsonValue,
+      createdById: userId,
       note: 'Before blog update',
     });
 
@@ -102,11 +116,21 @@ export class BlogService {
     });
 
     await this.cacheService.delByPrefix('blog:');
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_UPDATE',
+      entityType: 'BLOG_POST',
+      entityId: updated.id,
+      metaJson: {
+        previousStatus: existing.status,
+        status: updated.status,
+      },
+    });
     
     return this.withMediaUrls(updated);
   }
 
-  async publish(id: string) {
+  async publish(id: string, userId?: string) {
     await this.findOne(id);
 
     const updated = await this.prisma.blogPost.update({
@@ -114,6 +138,7 @@ export class BlogService {
       data: {
         status: PublishStatus.PUBLISHED,
         publishedAt: new Date(),
+        scheduledAt: null,
       },
       include: {
         translations: true,
@@ -127,11 +152,23 @@ export class BlogService {
     const en = updated.translations.find((t) => t.locale === 'EN');
 
     if (tr?.slug) {
+      await this.revalidateService.revalidatePath('/tr/blog');
       await this.revalidateService.revalidatePath(`/tr/blog/${tr.slug}`);
     }
     if (en?.slug) {
+      await this.revalidateService.revalidatePath('/en/blog');
       await this.revalidateService.revalidatePath(`/en/blog/${en.slug}`);
     }
+
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_PUBLISH',
+      entityType: 'BLOG_POST',
+      entityId: updated.id,
+      metaJson: {
+        trigger: 'manual',
+      },
+    });
 
     return this.withMediaUrls(updated);
   }
@@ -196,7 +233,7 @@ export class BlogService {
     return this.versionsService.listVersions('BLOG_POST', id);
   }
 
-  async restoreVersion(id: string, versionId: string) {
+  async restoreVersion(id: string, versionId: string, userId?: string) {
     await this.findOne(id);
 
     const version = await this.versionsService.getVersion(versionId);
@@ -206,7 +243,7 @@ export class BlogService {
       where: { blogPostId: id },
     });
 
-    return this.prisma.blogPost.update({
+    const restored = await this.prisma.blogPost.update({
       where: { id },
       data: {
         status: snapshot.status,
@@ -234,6 +271,19 @@ export class BlogService {
         featuredImage: true,
       },
     });
+
+    await this.cacheService.delByPrefix('blog:');
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_RESTORE',
+      entityType: 'BLOG_POST',
+      entityId: restored.id,
+      metaJson: {
+        versionId,
+      },
+    });
+
+    return this.withMediaUrls(restored);
   }
 
   private withMediaUrls<

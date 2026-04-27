@@ -5,10 +5,15 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { RoleName } from '@prisma/client';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import type { AuthenticatedRequest } from '../auth/types/authenticated-request.type';
 import { CreateFormDto } from './dto/create-form.dto';
 import { UpdateFormDto } from './dto/update-form.dto';
 import { FormsService } from './forms.service';
@@ -17,14 +22,15 @@ import type { Response } from 'express';
 
 @ApiTags('forms')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(RoleName.ADMIN)
 @Controller('forms')
 export class FormsController {
   constructor(private readonly formsService: FormsService) {}
 
   @Post()
-  create(@Body() body: CreateFormDto) {
-    return this.formsService.create(body);
+  create(@Body() body: CreateFormDto, @Req() req: AuthenticatedRequest) {
+    return this.formsService.create(body, req.user.id);
   }
 
   @Get()
@@ -38,8 +44,12 @@ export class FormsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: UpdateFormDto) {
-    return this.formsService.update(id, body);
+  update(
+    @Param('id') id: string,
+    @Body() body: UpdateFormDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.formsService.update(id, body, req.user.id);
   }
 
   @Get(':id/submissions')

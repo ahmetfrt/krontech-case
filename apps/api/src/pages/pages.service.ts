@@ -6,6 +6,7 @@ import { UpdatePageDto } from './dto/update-page.dto';
 import { VersionsService } from '../versions/versions.service';
 import { CacheService } from '../cache/cache.service';
 import { RevalidateService } from '../revalidate/revalidate.service';
+import { AuditService } from '../audit/audit.service';
 
 
 @Injectable()
@@ -14,11 +15,12 @@ export class PagesService {
     private readonly prisma: PrismaService,
     private readonly versionsService: VersionsService,
     private readonly cacheService: CacheService,
-    private readonly revalidateService: RevalidateService
+    private readonly revalidateService: RevalidateService,
+    private readonly auditService: AuditService,
   ) {}
 
   async create(dto: CreatePageDto, userId?: string) {
-    return this.prisma.page.create({
+    const page = await this.prisma.page.create({
       data: {
         pageType: dto.pageType,
         status: dto.status ?? PublishStatus.DRAFT,
@@ -42,6 +44,19 @@ export class PagesService {
         },
       },
     });
+
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_CREATE',
+      entityType: 'PAGE',
+      entityId: page.id,
+      metaJson: {
+        pageType: page.pageType,
+        status: page.status,
+      },
+    });
+
+    return page;
   }
 
   async findAll() {
@@ -118,6 +133,16 @@ export class PagesService {
     });
 
     await this.cacheService.delByPrefix('page:');
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_UPDATE',
+      entityType: 'PAGE',
+      entityId: updated.id,
+      metaJson: {
+        previousStatus: existing.status,
+        status: updated.status,
+      },
+    });
 
     return updated;
   }
@@ -130,6 +155,7 @@ export class PagesService {
       data: {
         status: PublishStatus.PUBLISHED,
         publishedAt: new Date(),
+        scheduledAt: null,
         updatedById: userId,
       },
       include: {
@@ -152,6 +178,16 @@ export class PagesService {
     if (en?.slug) {
       await this.revalidateService.revalidatePath('/en');
     }
+
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_PUBLISH',
+      entityType: 'PAGE',
+      entityId: updated.id,
+      metaJson: {
+        trigger: 'manual',
+      },
+    });
 
     return updated;
   }
@@ -205,7 +241,7 @@ export class PagesService {
     await this.prisma.pageTranslation.deleteMany({ where: { pageId: id } });
     await this.prisma.pageBlock.deleteMany({ where: { pageId: id } });
 
-    return this.prisma.page.update({
+    const restored = await this.prisma.page.update({
       where: { id },
       data: {
         pageType: snapshot.pageType,
@@ -243,5 +279,18 @@ export class PagesService {
         },
       },
     });
+
+    await this.cacheService.delByPrefix('page:');
+    await this.auditService.log({
+      userId,
+      action: 'CONTENT_RESTORE',
+      entityType: 'PAGE',
+      entityId: restored.id,
+      metaJson: {
+        versionId,
+      },
+    });
+
+    return restored;
   }
 }
