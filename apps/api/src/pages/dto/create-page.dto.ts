@@ -2,9 +2,11 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsISO8601,
   IsInt,
   IsOptional,
   IsString,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -51,6 +53,9 @@ class CreatePageTranslationDto {
   @IsOptional()
   @IsBoolean()
   robotsFollow?: boolean;
+
+  @IsOptional()
+  structuredDataJson?: unknown;
 }
 
 class CreatePageBlockDto {
@@ -61,7 +66,7 @@ class CreatePageBlockDto {
   sortOrder: number;
 
   @IsOptional()
-  configJson: any;
+  configJson: unknown;
 }
 
 export class CreatePageDto {
@@ -71,6 +76,13 @@ export class CreatePageDto {
   @IsOptional()
   @IsEnum(PublishStatus)
   status?: PublishStatus;
+
+  @ValidateIf(
+    (dto: CreatePageDto) =>
+      dto.status === PublishStatus.SCHEDULED || dto.scheduledAt !== undefined,
+  )
+  @IsISO8601()
+  scheduledAt?: string | null;
 
   @IsArray()
   @ValidateNested({ each: true })

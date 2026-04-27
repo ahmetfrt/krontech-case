@@ -1,4 +1,5 @@
 import { JsonLd } from '@/components/seo/json-ld';
+import Link from 'next/link';
 import { getPublishedResources } from '@/lib/resources';
 import { normalizeApiLocale } from '@/lib/i18n';
 import { resolveMediaUrl } from '@/lib/media';
@@ -25,6 +26,14 @@ type ResourceListItem = {
   resourceType: string;
   translations: ResourceTranslation[];
 };
+
+async function getResourcesSafely(locale: string): Promise<ResourceListItem[]> {
+  try {
+    return (await getPublishedResources(locale)) as ResourceListItem[];
+  } catch {
+    return [];
+  }
+}
 
 export async function generateMetadata({
   params,
@@ -55,7 +64,7 @@ export default async function ResourcesPage({
   const { locale } = await params;
   const apiLocale = normalizeApiLocale(locale);
 
-  const resources = (await getPublishedResources(apiLocale)) as ResourceListItem[];
+  const resources = await getResourcesSafely(apiLocale);
   const title = locale === 'tr' ? 'Kaynaklar' : 'Resources';
   const description =
     locale === 'tr'
@@ -71,7 +80,7 @@ export default async function ResourcesPage({
 
       return {
         name: current.title,
-        url: buildAbsoluteUrl(`/${locale}/resources#${current.slug}`),
+        url: buildAbsoluteUrl(`/${locale}/resources/${current.slug}`),
       };
     })
     .filter((item): item is { name: string; url: string } => Boolean(item));
@@ -132,6 +141,14 @@ export default async function ResourcesPage({
                   >
                     {locale === 'tr' ? 'Kaynağı aç' : 'Open resource'}
                   </a>
+                ) : null}
+                {current?.slug ? (
+                  <Link
+                    href={`/${locale}/resources/${current.slug}`}
+                    className="inline-block text-blue-600 underline"
+                  >
+                    {locale === 'tr' ? 'Detayları incele' : 'View details'}
+                  </Link>
                 ) : null}
               </div>
             </article>

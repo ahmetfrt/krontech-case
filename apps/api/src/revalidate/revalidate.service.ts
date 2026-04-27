@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class RevalidateService {
-  private readonly baseUrl = 'http://localhost:3000';
+  private readonly baseUrl =
+    process.env.NEXT_REVALIDATE_BASE_URL ??
+    process.env.WEB_INTERNAL_URL ??
+    'http://localhost:3000';
   private readonly secret = process.env.NEXT_REVALIDATE_SECRET ?? '';
 
   async revalidatePath(path: string) {

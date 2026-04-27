@@ -7,7 +7,7 @@ export class CacheService {
 
   constructor() {
     this.client = createClient({
-      url: 'redis://localhost:6379',
+      url: process.env.REDIS_URL ?? 'redis://localhost:6379',
     });
 
     this.client.connect().catch(() => {
@@ -15,7 +15,7 @@ export class CacheService {
     });
   }
 
-  async get<T = any>(key: string): Promise<T | null> {
+  async get<T = unknown>(key: string): Promise<T | null> {
     const value = await this.client.get(key);
     return value ? (JSON.parse(value) as T) : null;
   }
@@ -31,7 +31,19 @@ export class CacheService {
   }
 
   async delByPrefix(prefix: string) {
-    const keys = await this.client.keys(`${prefix}*`);
+    const keys: string[] = [];
+
+    for await (const key of this.client.scanIterator({
+      MATCH: `${prefix}*`,
+      COUNT: 100,
+    })) {
+      if (Array.isArray(key)) {
+        keys.push(...key.map(String));
+      } else {
+        keys.push(String(key));
+      }
+    }
+
     if (keys.length) {
       await this.client.del(keys);
     }

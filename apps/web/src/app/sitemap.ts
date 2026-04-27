@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { getPublishedBlogList } from '@/lib/blog';
 import { getPublishedResources } from '@/lib/resources';
 import { getPublishedProducts } from '@/lib/products';
+import { getPublishedPages } from '@/lib/api';
 import { buildAbsoluteUrl } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,7 @@ type TranslationRoute = {
 };
 
 type PublishedEntity = {
+  pageType?: string;
   publishedAt?: string | Date | null;
   translations?: TranslationRoute[];
   updatedAt?: string | Date | null;
@@ -50,6 +52,27 @@ function localizedRoutes(
   return routes;
 }
 
+function genericPageRoutes(
+  items: PublishedEntity[],
+  locale: 'TR' | 'EN',
+  publicLocale: 'tr' | 'en',
+): MetadataRoute.Sitemap {
+  const reservedSlugs = new Set([
+    locale === 'TR' ? 'ana-sayfa' : 'home-page',
+    'products',
+    'resources',
+    'blog',
+    'contact',
+  ]);
+
+  return localizedRoutes(
+    items.filter((item) => item.pageType === 'STANDARD' || !item.pageType),
+    locale,
+    (slug) =>
+      reservedSlugs.has(slug) ? `/${publicLocale}` : `/${publicLocale}/${slug}`,
+  ).filter((route) => !route.url.endsWith(`/${publicLocale}`));
+}
+
 async function getProductRoutes() {
   const [trProducts, enProducts] = await Promise.all([
     safeList<PublishedEntity>(() => getPublishedProducts('TR')),
@@ -63,8 +86,14 @@ async function getProductRoutes() {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [trBlogPosts, enBlogPosts, trResources, enResources] =
+  const [trPages, enPages, trBlogPosts, enBlogPosts, trResources, enResources] =
     await Promise.all([
+      safeList<PublishedEntity>(
+        () => getPublishedPages('TR') as Promise<PublishedEntity[]>,
+      ),
+      safeList<PublishedEntity>(
+        () => getPublishedPages('EN') as Promise<PublishedEntity[]>,
+      ),
       safeList<PublishedEntity>(
         () => getPublishedBlogList('TR') as Promise<PublishedEntity[]>,
       ),
@@ -108,17 +137,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const trResourceRoutes = localizedRoutes(
     trResources,
     'TR',
-    (slug) => `/tr/resources#${slug}`,
+    (slug) => `/tr/resources/${slug}`,
   );
 
   const enResourceRoutes = localizedRoutes(
     enResources,
     'EN',
-    (slug) => `/en/resources#${slug}`,
+    (slug) => `/en/resources/${slug}`,
   );
 
   return [
     ...staticRoutes,
+    ...genericPageRoutes(trPages, 'TR', 'tr'),
+    ...genericPageRoutes(enPages, 'EN', 'en'),
     ...productRoutes,
     ...trBlogRoutes,
     ...enBlogRoutes,

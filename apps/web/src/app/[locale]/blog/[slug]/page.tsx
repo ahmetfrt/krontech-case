@@ -1,4 +1,4 @@
-import { getPublishedBlogPost } from '@/lib/blog';
+import { getPublishedBlogPost, type PublishedBlogPost } from '@/lib/blog';
 import { JsonLd } from '@/components/seo/json-ld';
 import {
   articleJsonLd,
@@ -8,7 +8,7 @@ import {
 } from '@/lib/seo';
 import { normalizeApiLocale } from '@/lib/i18n';
 import Image from 'next/image';
-import { fallbackImage, resolveMediaUrl } from '@/lib/media';
+import { resolveMediaUrl } from '@/lib/media';
 
 
 export async function generateMetadata({
@@ -19,21 +19,25 @@ export async function generateMetadata({
   const { locale, slug } = await params;
   const apiLocale = normalizeApiLocale(locale);
 
-  const post = await getPublishedBlogPost(apiLocale, slug);
-  const current = post.translations.find((t: any) => t.locale === apiLocale);
+  const post = (await getPublishedBlogPost(apiLocale, slug)) as PublishedBlogPost;
+  const current = post.translations.find((t) => t.locale === apiLocale);
 
-  const trTranslation = post.translations.find((t: any) => t.locale === 'TR');
-  const enTranslation = post.translations.find((t: any) => t.locale === 'EN');
+  const trTranslation = post.translations.find((t) => t.locale === 'TR');
+  const enTranslation = post.translations.find((t) => t.locale === 'EN');
 
   return buildMetadata({
     title: current?.seoTitle || current?.title || 'Blog',
     description:
       current?.seoDescription || current?.excerpt || 'Blog detail',
-    canonicalPath: `/${locale}/blog/${slug}`,
+    canonicalPath: current?.canonicalUrl || `/${locale}/blog/${slug}`,
     alternatePaths: {
       ...(trTranslation ? { tr: `/tr/blog/${trTranslation.slug}` } : {}),
       ...(enTranslation ? { en: `/en/blog/${enTranslation.slug}` } : {}),
     },
+    ogTitle: current?.ogTitle,
+    ogDescription: current?.ogDescription,
+    robotsIndex: current?.robotsIndex ?? true,
+    robotsFollow: current?.robotsFollow ?? true,
   });
 }
 
@@ -45,17 +49,19 @@ export default async function BlogDetailPage({
   const { locale, slug } = await params;
   const apiLocale = normalizeApiLocale(locale);
 
-  const post = await getPublishedBlogPost(apiLocale, slug);
-  const current = post.translations.find((t: any) => t.locale === apiLocale);
+  const post = (await getPublishedBlogPost(apiLocale, slug)) as PublishedBlogPost;
+  const current = post.translations.find((t) => t.locale === apiLocale);
   const featuredUrl = resolveMediaUrl(post.featuredImage?.publicUrl);
 
-  const jsonLd = articleJsonLd({
-    headline: current?.title || '',
-    description: current?.excerpt || '',
-    url: buildAbsoluteUrl(`/${locale}/blog/${slug}`),
-    authorName: post.authorName,
-    image: featuredUrl || undefined,
-  });
+  const jsonLd =
+    current?.structuredDataJson ||
+    articleJsonLd({
+      headline: current?.title || '',
+      description: current?.excerpt || '',
+      url: buildAbsoluteUrl(`/${locale}/blog/${slug}`),
+      authorName: post.authorName ?? undefined,
+      image: featuredUrl || undefined,
+    });
 
   return (
     <main className="p-8 space-y-6">

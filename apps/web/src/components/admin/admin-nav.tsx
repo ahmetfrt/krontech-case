@@ -12,6 +12,8 @@ const links = [
   { href: '/admin/resources', label: 'Resources' },
   { href: '/admin/forms', label: 'Forms' },
   { href: '/admin/media', label: 'Media' },
+  { href: '/admin/redirects', label: 'Redirects' },
+  { href: '/admin/audit', label: 'Audit' },
 ];
 
 export function AdminNav() {

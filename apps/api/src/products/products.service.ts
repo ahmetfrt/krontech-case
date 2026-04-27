@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, PublishStatus } from '@prisma/client';
+import { Locale, Prisma, PublishStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -8,6 +8,21 @@ import { CacheService } from '../cache/cache.service';
 import { RevalidateService } from '../revalidate/revalidate.service';
 import { MediaService } from '../media/media.service';
 import { AuditService } from '../audit/audit.service';
+import {
+  createPublishingFields,
+  updatePublishingFields,
+} from '../publishing/publishing-fields';
+import {
+  asSnapshotRecord,
+  snapshotArray,
+  snapshotBoolean,
+  snapshotDate,
+  snapshotJson,
+  snapshotLocale,
+  snapshotNullableString,
+  snapshotStatus,
+  snapshotString,
+} from '../versions/version-snapshot';
 
 
 @Injectable()
@@ -26,9 +41,14 @@ export class ProductsService {
       data: {
         productCode: dto.productCode,
         heroImageId: dto.heroImageId,
-        status: dto.status ?? PublishStatus.DRAFT,
+        ...createPublishingFields({
+          status: dto.status,
+          scheduledAt: dto.scheduledAt,
+        }),
         translations: {
-          create: dto.translations,
+          create: dto.translations.map((translation) =>
+            this.toTranslationCreateInput(translation),
+          ),
         },
       },
       include: {
@@ -102,10 +122,15 @@ export class ProductsService {
         productCode: dto.productCode,
         heroImageId:
           dto.heroImageId === undefined ? undefined : dto.heroImageId,
-        status: dto.status,
+        ...updatePublishingFields({
+          status: dto.status,
+          scheduledAt: dto.scheduledAt,
+        }),
         translations: dto.translations
           ? {
-              create: dto.translations,
+              create: dto.translations.map((translation) =>
+                this.toTranslationCreateInput(translation),
+              ),
             }
           : undefined,
       },
@@ -176,7 +201,8 @@ export class ProductsService {
   }
 
   async findPublishedList(locale: string) {
-    const cacheKey = `product:list:${locale}`;
+    const apiLocale = this.toLocale(locale);
+    const cacheKey = `product:list:${apiLocale}`;
     const cached = await this.cacheService.get(cacheKey);
 
     if (cached) {
@@ -188,7 +214,7 @@ export class ProductsService {
         status: PublishStatus.PUBLISHED,
         translations: {
           some: {
-            locale: locale as any,
+            locale: apiLocale,
           },
         },
       },
@@ -209,7 +235,8 @@ export class ProductsService {
   }
 
   async findPublishedByLocaleAndSlug(locale: string, slug: string) {
-    const cacheKey = `product:${locale}:${slug}`;
+    const apiLocale = this.toLocale(locale);
+    const cacheKey = `product:${apiLocale}:${slug}`;
     const cached = await this.cacheService.get(cacheKey);
 
     if (cached) {
@@ -221,7 +248,7 @@ export class ProductsService {
         status: PublishStatus.PUBLISHED,
         translations: {
           some: {
-            locale: locale as any,
+            locale: apiLocale,
             slug,
           },
         },
@@ -261,7 +288,7 @@ export class ProductsService {
     await this.findOne(id);
 
     const version = await this.versionsService.getVersion(versionId);
-    const snapshot = version.snapshotJson as any;
+    const snapshot = asSnapshotRecord(version.snapshotJson);
 
     await this.prisma.productTranslation.deleteMany({
       where: { productId: id },
@@ -270,23 +297,26 @@ export class ProductsService {
     const restored = await this.prisma.product.update({
       where: { id },
       data: {
-        productCode: snapshot.productCode,
-        heroImageId: snapshot.heroImageId ?? null,
-        status: snapshot.status,
-        publishedAt: snapshot.publishedAt ? new Date(snapshot.publishedAt) : null,
-        scheduledAt: snapshot.scheduledAt ? new Date(snapshot.scheduledAt) : null,
+        productCode: snapshotString(snapshot.productCode) ?? id,
+        heroImageId: snapshotNullableString(snapshot.heroImageId),
+        status: snapshotStatus(snapshot.status),
+        publishedAt: snapshotDate(snapshot.publishedAt),
+        scheduledAt: snapshotDate(snapshot.scheduledAt),
         translations: {
-          create: (snapshot.translations || []).map((t: any) => ({
-            locale: t.locale,
-            title: t.title,
-            slug: t.slug,
-            shortDescription: t.shortDescription,
-            longDescription: t.longDescription,
-            seoTitle: t.seoTitle,
-            seoDescription: t.seoDescription,
-            ogTitle: t.ogTitle,
-            ogDescription: t.ogDescription,
-            canonicalUrl: t.canonicalUrl,
+          create: snapshotArray(snapshot.translations).map((t) => ({
+            locale: snapshotLocale(t.locale),
+            title: snapshotString(t.title) ?? '',
+            slug: snapshotString(t.slug) ?? '',
+            shortDescription: snapshotString(t.shortDescription),
+            longDescription: snapshotString(t.longDescription),
+            seoTitle: snapshotString(t.seoTitle),
+            seoDescription: snapshotString(t.seoDescription),
+            ogTitle: snapshotString(t.ogTitle),
+            ogDescription: snapshotString(t.ogDescription),
+            canonicalUrl: snapshotString(t.canonicalUrl),
+            robotsIndex: snapshotBoolean(t.robotsIndex),
+            robotsFollow: snapshotBoolean(t.robotsFollow),
+            structuredDataJson: snapshotJson(t.structuredDataJson),
           })),
         },
       },
@@ -316,6 +346,19 @@ export class ProductsService {
     return {
       ...product,
       heroImage: this.mediaService.withPublicUrl(product.heroImage),
+    };
+  }
+
+  private toLocale(locale: string) {
+    return locale.toUpperCase() === 'EN' ? Locale.EN : Locale.TR;
+  }
+
+  private toTranslationCreateInput(
+    translation: CreateProductDto['translations'][number],
+  ) {
+    return {
+      ...translation,
+      structuredDataJson: snapshotJson(translation.structuredDataJson),
     };
   }
 }

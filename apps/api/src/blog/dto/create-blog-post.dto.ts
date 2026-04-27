@@ -1,8 +1,11 @@
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
+  IsISO8601,
   IsOptional,
   IsString,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -45,12 +48,30 @@ class CreateBlogPostTranslationDto {
   @IsOptional()
   @IsString()
   canonicalUrl?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  robotsIndex?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  robotsFollow?: boolean;
+
+  @IsOptional()
+  structuredDataJson?: unknown;
 }
 
 export class CreateBlogPostDto {
   @IsOptional()
   @IsEnum(PublishStatus)
   status?: PublishStatus;
+
+  @ValidateIf(
+    (dto: CreateBlogPostDto) =>
+      dto.status === PublishStatus.SCHEDULED || dto.scheduledAt !== undefined,
+  )
+  @IsISO8601()
+  scheduledAt?: string | null;
 
   @IsOptional()
   @IsString()

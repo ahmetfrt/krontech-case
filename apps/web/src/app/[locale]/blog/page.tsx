@@ -26,6 +26,14 @@ type BlogListItem = {
   translations: BlogTranslation[];
 };
 
+async function getPostsSafely(locale: string): Promise<BlogListItem[]> {
+  try {
+    return (await getPublishedBlogList(locale)) as BlogListItem[];
+  } catch {
+    return [];
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -55,7 +63,7 @@ export default async function BlogListPage({
   const { locale } = await params;
   const apiLocale = normalizeApiLocale(locale);
 
-  const posts = (await getPublishedBlogList(apiLocale)) as BlogListItem[];
+  const posts = await getPostsSafely(apiLocale);
   const pageDescription =
     locale === 'tr'
       ? 'Krontech guvenlik, erisim yonetimi ve uyumluluk yazilari'

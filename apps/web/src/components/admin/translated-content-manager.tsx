@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminFetch } from '@/lib/admin/api';
 import { getAdminToken } from '@/lib/admin/auth';
 import { ProtectedAdmin } from './protected-admin';
+import { VersionPanel } from './version-panel';
 
 const LOCALES = ['TR', 'EN'] as const;
 const STATUSES = ['DRAFT', 'PUBLISHED', 'SCHEDULED'] as const;
@@ -37,11 +38,14 @@ type TranslationKey =
   | 'seoTitle'
   | 'shortDescription'
   | 'slug'
+  | 'structuredDataJson'
   | 'summary'
   | 'title';
+type TranslationBooleanKey = 'robotsFollow' | 'robotsIndex';
 
 type RootState = Record<RootKey, string>;
-type TranslationState = Record<TranslationKey, string>;
+type TranslationState = Record<TranslationKey, string> &
+  Record<TranslationBooleanKey, boolean>;
 
 type RootField = {
   help?: string;
@@ -72,9 +76,15 @@ type ManagerConfig = {
   translationFields: TranslationField[];
 };
 
-type ContentTranslation = Partial<Record<TranslationKey, string | null>> & {
+type ContentTranslation = Omit<
+  Partial<Record<TranslationKey, string | null>>,
+  'structuredDataJson'
+> & {
   locale: Locale;
+  robotsFollow?: boolean | null;
+  robotsIndex?: boolean | null;
   slug: string;
+  structuredDataJson?: unknown;
   title: string;
 };
 
@@ -82,6 +92,7 @@ type ContentItem = Partial<Record<RootKey, string | null>> & {
   createdAt?: string;
   id: string;
   publishedAt?: string | null;
+  scheduledAt?: string | null;
   status: PublishStatus;
   translations: ContentTranslation[];
   updatedAt?: string;
@@ -97,15 +108,19 @@ type MediaAsset = {
 type EditorState = {
   id?: string;
   root: RootState;
+  scheduledAt: string;
   status: PublishStatus;
   translations: Record<Locale, TranslationState>;
 };
 
 type PayloadTranslation = {
   locale: Locale;
+  robotsFollow: boolean;
+  robotsIndex: boolean;
   slug: string;
+  structuredDataJson?: unknown;
   title: string;
-} & Partial<Record<TranslationKey, string>>;
+} & Omit<Partial<Record<TranslationKey, string>>, 'structuredDataJson'>;
 
 export const contentManagerConfigs = {
   products: {
@@ -231,6 +246,13 @@ export const contentManagerConfigs = {
         label: 'SEO description',
         multiline: true,
       },
+      { key: 'ogTitle', label: 'OG title' },
+      {
+        key: 'ogDescription',
+        label: 'OG description',
+        multiline: true,
+      },
+      { key: 'canonicalUrl', label: 'Canonical URL' },
     ],
   },
 } satisfies Record<string, ManagerConfig>;
@@ -474,6 +496,23 @@ export function TranslatedContentManager({
                 </select>
               </label>
 
+              <label className="space-y-2">
+                <span className="text-sm font-semibold text-gray-700">
+                  Scheduled publish
+                </span>
+                <input
+                  type="datetime-local"
+                  value={editor.scheduledAt}
+                  onChange={(event) =>
+                    setEditor((current) => ({
+                      ...current,
+                      scheduledAt: event.target.value,
+                    }))
+                  }
+                  className="h-11 w-full rounded-md border border-gray-300 px-3 text-sm"
+                />
+              </label>
+
               {config.rootFields.map((field) => (
                 <RootFieldControl
                   key={field.key}
@@ -536,6 +575,16 @@ export function TranslatedContentManager({
             </div>
           </form>
         </div>
+
+        <VersionPanel<ContentItem>
+          endpoint={config.endpoint}
+          entityId={editor.id}
+          onRestored={async (restored) => {
+            setEditor(itemToEditor(restored, config));
+            await loadItems();
+            setMessage(`${config.entityLabel} restored.`);
+          }}
+        />
       </div>
     </ProtectedAdmin>
   );
@@ -652,6 +701,30 @@ function TranslationCard({
             />
           ),
         )}
+        <TextArea
+          label="Structured data JSON"
+          rows={6}
+          value={translation.structuredDataJson}
+          onChange={(value) =>
+            updateTranslation(locale, 'structuredDataJson', value, setEditor)
+          }
+        />
+        <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+          <CheckboxField
+            checked={translation.robotsIndex}
+            label="Index"
+            onChange={(value) =>
+              updateTranslation(locale, 'robotsIndex', value, setEditor)
+            }
+          />
+          <CheckboxField
+            checked={translation.robotsFollow}
+            label="Follow"
+            onChange={(value) =>
+              updateTranslation(locale, 'robotsFollow', value, setEditor)
+            }
+          />
+        </div>
       </div>
     </div>
   );
@@ -668,6 +741,7 @@ function createEmptyEditor(config: ManagerConfig): EditorState {
       productCode: config.rootDefaults?.productCode ?? '',
       resourceType: config.rootDefaults?.resourceType ?? '',
     },
+    scheduledAt: '',
     status: 'DRAFT',
     translations: {
       EN: createEmptyTranslation(),
@@ -684,10 +758,13 @@ function createEmptyTranslation(): TranslationState {
     longDescription: '',
     ogDescription: '',
     ogTitle: '',
+    robotsFollow: true,
+    robotsIndex: true,
     seoDescription: '',
     seoTitle: '',
     shortDescription: '',
     slug: '',
+    structuredDataJson: '',
     summary: '',
     title: '',
   };
@@ -709,17 +786,27 @@ function itemToEditor(item: ContentItem, config: ManagerConfig): EditorState {
       const value = translation[field.key];
       editor.translations[locale][field.key] = typeof value === 'string' ? value : '';
     }
+
+    editor.translations[locale].robotsFollow =
+      translation.robotsFollow ?? true;
+    editor.translations[locale].robotsIndex = translation.robotsIndex ?? true;
+    editor.translations[locale].structuredDataJson =
+      JSON.stringify(translation.structuredDataJson ?? null, null, 2) === 'null'
+        ? ''
+        : JSON.stringify(translation.structuredDataJson, null, 2);
   }
 
   return {
     ...editor,
     id: item.id,
+    scheduledAt: toDateTimeLocal(item.scheduledAt),
     status: item.status,
   };
 }
 
 function buildPayload(editor: EditorState, config: ManagerConfig) {
   const payload: Record<string, unknown> = {
+    scheduledAt: scheduledAtPayload(editor),
     status: editor.status,
     translations: buildTranslations(editor, config),
   };
@@ -761,6 +848,8 @@ function buildTranslations(editor: EditorState, config: ManagerConfig) {
 
     const translation: PayloadTranslation = {
       locale,
+      robotsFollow: source.robotsFollow,
+      robotsIndex: source.robotsIndex,
       slug: source.slug.trim(),
       title: source.title.trim(),
     };
@@ -771,6 +860,14 @@ function buildTranslations(editor: EditorState, config: ManagerConfig) {
 
       if (value) {
         translation[field.key] = value;
+      }
+    }
+
+    if (source.structuredDataJson.trim()) {
+      try {
+        translation.structuredDataJson = JSON.parse(source.structuredDataJson);
+      } catch {
+        throw new Error(`${locale} structured data JSON is invalid.`);
       }
     }
 
@@ -819,6 +916,18 @@ function updateTranslation(
   field: TranslationKey,
   value: string,
   setEditor: Dispatch<SetStateAction<EditorState>>,
+): void;
+function updateTranslation(
+  locale: Locale,
+  field: TranslationBooleanKey,
+  value: boolean,
+  setEditor: Dispatch<SetStateAction<EditorState>>,
+): void;
+function updateTranslation(
+  locale: Locale,
+  field: TranslationKey | TranslationBooleanKey,
+  value: string | boolean,
+  setEditor: Dispatch<SetStateAction<EditorState>>,
 ) {
   setEditor((current) => ({
     ...current,
@@ -830,6 +939,52 @@ function updateTranslation(
       },
     },
   }));
+}
+
+function CheckboxField({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="inline-flex items-center gap-2">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="size-4 rounded border-gray-300"
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+function scheduledAtPayload(editor: EditorState) {
+  if (editor.status !== 'SCHEDULED') {
+    return null;
+  }
+
+  if (!editor.scheduledAt) {
+    throw new Error('Scheduled publish date is required for scheduled content.');
+  }
+
+  return new Date(editor.scheduledAt).toISOString();
+}
+
+function toDateTimeLocal(value?: string | null) {
+  if (!value) return '';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toISOString().slice(0, 16);
 }
 
 function StatusBadge({

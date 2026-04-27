@@ -2,6 +2,10 @@ const SITE_NAME = 'Krontech Case';
 const BRAND_NAME = 'Krontech';
 
 export function buildAbsoluteUrl(path: string) {
+  if (/^https?:\/\//.test(path)) {
+    return path;
+  }
+
   const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
   ).replace(/\/$/, '');
@@ -32,6 +36,10 @@ export function buildMetadata({
   description,
   canonicalPath,
   alternatePaths,
+  ogDescription,
+  ogTitle,
+  robotsFollow = true,
+  robotsIndex = true,
 }: {
   title: string;
   description: string;
@@ -40,8 +48,14 @@ export function buildMetadata({
     tr?: string;
     en?: string;
   };
+  ogDescription?: string | null;
+  ogTitle?: string | null;
+  robotsFollow?: boolean;
+  robotsIndex?: boolean;
 }) {
   const canonicalUrl = buildAbsoluteUrl(canonicalPath);
+  const resolvedOgTitle = ogTitle || title;
+  const resolvedOgDescription = ogDescription || description;
 
   return {
     title,
@@ -52,20 +66,20 @@ export function buildMetadata({
           canonical: canonicalUrl,
         },
     openGraph: {
-      title,
-      description,
+      title: resolvedOgTitle,
+      description: resolvedOgDescription,
       url: canonicalUrl,
       siteName: SITE_NAME,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
-      title,
-      description,
+      title: resolvedOgTitle,
+      description: resolvedOgDescription,
     },
     robots: {
-      index: true,
-      follow: true,
+      index: robotsIndex,
+      follow: robotsFollow,
     },
   };
 }

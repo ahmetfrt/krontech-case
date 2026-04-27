@@ -7,6 +7,11 @@ import { PagesService } from './pages.service';
 export class PublicPagesController {
   constructor(private readonly pagesService: PagesService) {}
 
+  @Get(':locale')
+  findList(@Param('locale') locale: string) {
+    return this.pagesService.findPublishedList(locale);
+  }
+
   @Get(':locale/:slug')
   findOneByLocaleAndSlug(
     @Param('locale') locale: string,

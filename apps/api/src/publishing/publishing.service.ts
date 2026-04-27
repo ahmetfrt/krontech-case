@@ -127,7 +127,12 @@ export class PublishingService {
 
     await this.cacheService.delByPrefix('page:');
     await this.revalidatePaths(
-      translations.map((translation) => `/${this.toPathLocale(translation.locale)}`),
+      translations.map((translation) =>
+        this.buildPagePath(
+          this.toPathLocale(translation.locale),
+          translation.slug,
+        ),
+      ),
     );
   }
 
@@ -177,11 +182,15 @@ export class PublishingService {
     }
 
     await this.cacheService.delByPrefix('resource:');
-    await this.revalidatePaths(
-      translations.map(
+    await this.revalidatePaths([
+      ...translations.map(
         (translation) => `/${this.toPathLocale(translation.locale)}/resources`,
       ),
-    );
+      ...translations.map(
+        (translation) =>
+          `/${this.toPathLocale(translation.locale)}/resources/${translation.slug}`,
+      ),
+    ]);
   }
 
   private async revalidatePaths(paths: string[]) {
@@ -194,5 +203,16 @@ export class PublishingService {
 
   private toPathLocale(locale: Locale) {
     return locale === Locale.TR ? 'tr' : 'en';
+  }
+
+  private buildPagePath(locale: 'en' | 'tr', slug: string) {
+    if (
+      (locale === 'tr' && slug === 'ana-sayfa') ||
+      (locale === 'en' && slug === 'home-page')
+    ) {
+      return `/${locale}`;
+    }
+
+    return `/${locale}/${slug}`;
   }
 }

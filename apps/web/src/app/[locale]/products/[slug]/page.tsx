@@ -1,4 +1,4 @@
-import { getPublishedProduct } from '@/lib/products';
+import { getPublishedProduct, type PublishedProduct } from '@/lib/products';
 import { JsonLd } from '@/components/seo/json-ld';
 import {
   breadcrumbJsonLd,
@@ -19,11 +19,11 @@ export async function generateMetadata({
   const { locale, slug } = await params;
   const apiLocale = normalizeApiLocale(locale);
 
-  const product = await getPublishedProduct(apiLocale, slug);
-  const current = product.translations.find((t: any) => t.locale === apiLocale);
+  const product = (await getPublishedProduct(apiLocale, slug)) as PublishedProduct;
+  const current = product.translations.find((t) => t.locale === apiLocale);
 
-  const trTranslation = product.translations.find((t: any) => t.locale === 'TR');
-  const enTranslation = product.translations.find((t: any) => t.locale === 'EN');
+  const trTranslation = product.translations.find((t) => t.locale === 'TR');
+  const enTranslation = product.translations.find((t) => t.locale === 'EN');
 
   return buildMetadata({
     title: current?.seoTitle || current?.title || 'Product',
@@ -31,11 +31,15 @@ export async function generateMetadata({
       current?.seoDescription ||
       current?.shortDescription ||
       'Product detail',
-    canonicalPath: `/${locale}/products/${slug}`,
+    canonicalPath: current?.canonicalUrl || `/${locale}/products/${slug}`,
     alternatePaths: {
       ...(trTranslation ? { tr: `/tr/products/${trTranslation.slug}` } : {}),
       ...(enTranslation ? { en: `/en/products/${enTranslation.slug}` } : {}),
     },
+    ogTitle: current?.ogTitle,
+    ogDescription: current?.ogDescription,
+    robotsIndex: current?.robotsIndex ?? true,
+    robotsFollow: current?.robotsFollow ?? true,
   });
 }
 
@@ -47,17 +51,19 @@ export default async function ProductDetailPage({
   const { locale, slug } = await params;
   const apiLocale = normalizeApiLocale(locale);
 
-  const product = await getPublishedProduct(apiLocale, slug);
-  const current = product.translations.find((t: any) => t.locale === apiLocale);
+  const product = (await getPublishedProduct(apiLocale, slug)) as PublishedProduct;
+  const current = product.translations.find((t) => t.locale === apiLocale);
   const heroUrl =
     resolveMediaUrl(product.heroImage?.publicUrl) || fallbackImage();
 
-  const jsonLd = productJsonLd({
-    name: current?.title || '',
-    description: current?.shortDescription || current?.longDescription || '',
-    url: buildAbsoluteUrl(`/${locale}/products/${slug}`),
-    image: heroUrl,
-  });
+  const jsonLd =
+    current?.structuredDataJson ||
+    productJsonLd({
+      name: current?.title || '',
+      description: current?.shortDescription || current?.longDescription || '',
+      url: buildAbsoluteUrl(`/${locale}/products/${slug}`),
+      image: heroUrl,
+    });
 
   return (
     <main className="p-8 space-y-6">

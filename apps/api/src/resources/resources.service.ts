@@ -2,12 +2,28 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateResourceDto } from './dto/create-resource.dto';
 import { UpdateResourceDto } from './dto/update-resource.dto';
-import { Prisma, PublishStatus } from '@prisma/client';
+import { Locale, Prisma, PublishStatus } from '@prisma/client';
 import { VersionsService } from '../versions/versions.service';
 import { CacheService } from '../cache/cache.service';
 import { RevalidateService } from '../revalidate/revalidate.service';
 import { MediaService } from '../media/media.service';
 import { AuditService } from '../audit/audit.service';
+import {
+  createPublishingFields,
+  updatePublishingFields,
+} from '../publishing/publishing-fields';
+import {
+  asSnapshotRecord,
+  snapshotArray,
+  snapshotBoolean,
+  snapshotDate,
+  snapshotJson,
+  snapshotLocale,
+  snapshotNullableString,
+  snapshotResourceType,
+  snapshotStatus,
+  snapshotString,
+} from '../versions/version-snapshot';
 
 
 @Injectable()
@@ -25,11 +41,16 @@ export class ResourcesService {
     const resource = await this.prisma.resource.create({
       data: {
         resourceType: dto.resourceType,
-        status: dto.status ?? PublishStatus.DRAFT,
+        ...createPublishingFields({
+          status: dto.status,
+          scheduledAt: dto.scheduledAt,
+        }),
         fileId: dto.fileId,
         externalUrl: dto.externalUrl,
         translations: {
-          create: dto.translations,
+          create: dto.translations.map((translation) =>
+            this.toTranslationCreateInput(translation),
+          ),
         },
       },
       include: {
@@ -101,12 +122,17 @@ export class ResourcesService {
       where: { id },
       data: {
         resourceType: dto.resourceType,
-        status: dto.status,
+        ...updatePublishingFields({
+          status: dto.status,
+          scheduledAt: dto.scheduledAt,
+        }),
         fileId: dto.fileId === undefined ? undefined : dto.fileId,
         externalUrl: dto.externalUrl,
         translations: dto.translations
           ? {
-              create: dto.translations,
+              create: dto.translations.map((translation) =>
+                this.toTranslationCreateInput(translation),
+              ),
             }
           : undefined,
       },
@@ -154,9 +180,11 @@ export class ResourcesService {
 
     if (tr?.slug) {
       await this.revalidateService.revalidatePath(`/tr/resources`);
+      await this.revalidateService.revalidatePath(`/tr/resources/${tr.slug}`);
     }
     if (en?.slug) {
       await this.revalidateService.revalidatePath(`/en/resources`);
+      await this.revalidateService.revalidatePath(`/en/resources/${en.slug}`);
     }
 
     await this.auditService.log({
@@ -174,7 +202,8 @@ export class ResourcesService {
   }
 
   async findPublishedList(locale: string) {
-    const cacheKey = `resource:list:${locale}`;
+    const apiLocale = this.toLocale(locale);
+    const cacheKey = `resource:list:${apiLocale}`;
     const cached = await this.cacheService.get(cacheKey);
 
     if (cached) {
@@ -187,7 +216,7 @@ export class ResourcesService {
         status: PublishStatus.PUBLISHED,
         translations: {
           some: {
-            locale: locale as any,
+            locale: apiLocale,
           },
         },
       },
@@ -208,7 +237,8 @@ export class ResourcesService {
   }
 
   async findPublishedByLocaleAndSlug(locale: string, slug: string) {
-    const cacheKey = `resource:${locale}:${slug}`;
+    const apiLocale = this.toLocale(locale);
+    const cacheKey = `resource:${apiLocale}:${slug}`;
     const cached = await this.cacheService.get(cacheKey);
 
     if (cached) {
@@ -220,7 +250,7 @@ export class ResourcesService {
         status: PublishStatus.PUBLISHED,
         translations: {
           some: {
-            locale: locale as any,
+            locale: apiLocale,
             slug,
           },
         },
@@ -251,7 +281,7 @@ export class ResourcesService {
     await this.findOne(id);
 
     const version = await this.versionsService.getVersion(versionId);
-    const snapshot = version.snapshotJson as any;
+    const snapshot = asSnapshotRecord(version.snapshotJson);
 
     await this.prisma.resourceTranslation.deleteMany({
       where: { resourceId: id },
@@ -260,20 +290,26 @@ export class ResourcesService {
     const restored = await this.prisma.resource.update({
       where: { id },
       data: {
-        resourceType: snapshot.resourceType,
-        status: snapshot.status,
-        fileId: snapshot.fileId ?? null,
-        externalUrl: snapshot.externalUrl,
-        publishedAt: snapshot.publishedAt ? new Date(snapshot.publishedAt) : null,
-        scheduledAt: snapshot.scheduledAt ? new Date(snapshot.scheduledAt) : null,
+        resourceType: snapshotResourceType(snapshot.resourceType),
+        status: snapshotStatus(snapshot.status),
+        fileId: snapshotNullableString(snapshot.fileId),
+        externalUrl: snapshotNullableString(snapshot.externalUrl),
+        publishedAt: snapshotDate(snapshot.publishedAt),
+        scheduledAt: snapshotDate(snapshot.scheduledAt),
         translations: {
-          create: (snapshot.translations || []).map((t: any) => ({
-            locale: t.locale,
-            title: t.title,
-            slug: t.slug,
-            summary: t.summary,
-            seoTitle: t.seoTitle,
-            seoDescription: t.seoDescription,
+          create: snapshotArray(snapshot.translations).map((t) => ({
+            locale: snapshotLocale(t.locale),
+            title: snapshotString(t.title) ?? '',
+            slug: snapshotString(t.slug) ?? '',
+            summary: snapshotString(t.summary),
+            seoTitle: snapshotString(t.seoTitle),
+            seoDescription: snapshotString(t.seoDescription),
+            ogTitle: snapshotString(t.ogTitle),
+            ogDescription: snapshotString(t.ogDescription),
+            canonicalUrl: snapshotString(t.canonicalUrl),
+            robotsIndex: snapshotBoolean(t.robotsIndex),
+            robotsFollow: snapshotBoolean(t.robotsFollow),
+            structuredDataJson: snapshotJson(t.structuredDataJson),
           })),
         },
       },
@@ -303,6 +339,19 @@ export class ResourcesService {
     return {
       ...resource,
       file: this.mediaService.withPublicUrl(resource.file),
+    };
+  }
+
+  private toLocale(locale: string) {
+    return locale.toUpperCase() === 'EN' ? Locale.EN : Locale.TR;
+  }
+
+  private toTranslationCreateInput(
+    translation: CreateResourceDto['translations'][number],
+  ) {
+    return {
+      ...translation,
+      structuredDataJson: snapshotJson(translation.structuredDataJson),
     };
   }
 }

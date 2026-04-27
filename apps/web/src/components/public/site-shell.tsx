@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { localizedHref, publicNavigation } from '@/lib/navigation';
 
 type SiteShellProps = {
   children: ReactNode;
@@ -8,8 +9,6 @@ type SiteShellProps = {
 
 const copy = {
   en: {
-    products: 'Products',
-    resources: 'Resources',
     contact: 'Contact',
     admin: 'Admin',
     language: 'TR',
@@ -18,8 +17,6 @@ const copy = {
       'Privileged access, secure remote operations, and identity governance for enterprise teams.',
   },
   tr: {
-    products: 'Urunler',
-    resources: 'Kaynaklar',
     contact: 'Iletisim',
     admin: 'Yonetim',
     language: 'EN',
@@ -52,19 +49,16 @@ export function SiteShell({ children, locale }: SiteShellProps) {
             <span>Krontech</span>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-sm font-medium text-slate-700 md:flex">
-            <Link
-              href={`/${activeLocale}/products`}
-              className="transition hover:text-[#d71920]"
-            >
-              {t.products}
-            </Link>
-            <Link
-              href={`/${activeLocale}/resources`}
-              className="transition hover:text-[#d71920]"
-            >
-              {t.resources}
-            </Link>
+          <nav className="hidden items-center gap-5 text-sm font-medium text-slate-700 lg:flex">
+            {publicNavigation.map((group) => (
+              <Link
+                key={group.href}
+                href={localizedHref(activeLocale, group.href)}
+                className="transition hover:text-[#d71920]"
+              >
+                {group.label[activeLocale]}
+              </Link>
+            ))}
             <Link
               href={`/${activeLocale}/contact`}
               className="transition hover:text-[#d71920]"
@@ -88,6 +82,23 @@ export function SiteShell({ children, locale }: SiteShellProps) {
             </Link>
           </div>
         </div>
+        <nav className="mx-auto flex w-full max-w-7xl gap-3 overflow-x-auto px-4 pb-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600 sm:px-6 lg:hidden lg:px-8">
+          {publicNavigation.map((group) => (
+            <Link
+              key={group.href}
+              href={localizedHref(activeLocale, group.href)}
+              className="shrink-0 rounded-md border border-slate-200 bg-white px-3 py-2"
+            >
+              {group.label[activeLocale]}
+            </Link>
+          ))}
+          <Link
+            href={`/${activeLocale}/contact`}
+            className="shrink-0 rounded-md border border-slate-200 bg-white px-3 py-2"
+          >
+            {t.contact}
+          </Link>
+        </nav>
       </header>
 
       <div className="flex-1">{children}</div>
@@ -96,18 +107,15 @@ export function SiteShell({ children, locale }: SiteShellProps) {
         <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 text-sm text-slate-600 sm:px-6 md:grid-cols-[1fr_auto] lg:px-8">
           <p>{t.footer}</p>
           <div className="flex flex-wrap gap-4 font-medium text-slate-800">
-            <Link
-              href={`/${activeLocale}/products`}
-              className="hover:text-[#d71920]"
-            >
-              {t.products}
-            </Link>
-            <Link
-              href={`/${activeLocale}/resources`}
-              className="hover:text-[#d71920]"
-            >
-              {t.resources}
-            </Link>
+            {publicNavigation.map((group) => (
+              <Link
+                key={group.href}
+                href={localizedHref(activeLocale, group.href)}
+                className="hover:text-[#d71920]"
+              >
+                {group.label[activeLocale]}
+              </Link>
+            ))}
             <Link
               href={`/${activeLocale}/contact`}
               className="hover:text-[#d71920]"

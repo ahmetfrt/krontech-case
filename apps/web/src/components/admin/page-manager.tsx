@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { adminFetch } from '@/lib/admin/api';
 import { getAdminToken } from '@/lib/admin/auth';
 import { ProtectedAdmin } from './protected-admin';
+import { VersionPanel } from './version-panel';
 
 const LOCALES = ['TR', 'EN'] as const;
 const PAGE_TYPES = ['HOME', 'STANDARD', 'RESOURCES', 'CONTACT'] as const;
@@ -21,6 +22,7 @@ type PageTranslation = {
   seoDescription?: string | null;
   seoTitle?: string | null;
   slug: string;
+  structuredDataJson?: unknown;
   summary?: string | null;
   title: string;
 };
@@ -38,6 +40,7 @@ type PageItem = {
   id: string;
   pageType: PageType;
   publishedAt?: string | null;
+  scheduledAt?: string | null;
   status: PublishStatus;
   translations: PageTranslation[];
   updatedAt?: string;
@@ -50,6 +53,7 @@ type EditorTranslation = {
   seoDescription: string;
   seoTitle: string;
   slug: string;
+  structuredDataJson: string;
   summary: string;
   title: string;
 };
@@ -65,6 +69,7 @@ type EditorState = {
   blocks: EditorBlock[];
   id?: string;
   pageType: PageType;
+  scheduledAt: string;
   status: PublishStatus;
   translations: Record<Locale, EditorTranslation>;
 };
@@ -76,6 +81,7 @@ type PagePayload = {
     type: string;
   }[];
   pageType: PageType;
+  scheduledAt: string | null;
   status: PublishStatus;
   translations: {
     canonicalUrl?: string;
@@ -85,6 +91,7 @@ type PagePayload = {
     seoDescription?: string;
     seoTitle?: string;
     slug: string;
+    structuredDataJson?: unknown;
     summary?: string;
     title: string;
   }[];
@@ -311,6 +318,23 @@ export function PageManager() {
                 </select>
               </label>
 
+              <label className="space-y-2">
+                <span className="text-sm font-semibold text-gray-700">
+                  Scheduled publish
+                </span>
+                <input
+                  type="datetime-local"
+                  value={editor.scheduledAt}
+                  onChange={(event) =>
+                    setEditor((current) => ({
+                      ...current,
+                      scheduledAt: event.target.value,
+                    }))
+                  }
+                  className="h-11 w-full rounded-md border border-gray-300 px-3 text-sm"
+                />
+              </label>
+
               <div className="space-y-2">
                 <span className="text-sm font-semibold text-gray-700">
                   Current record
@@ -400,6 +424,19 @@ export function PageManager() {
                             updateTranslation(
                               locale,
                               'canonicalUrl',
+                              value,
+                              setEditor,
+                            )
+                          }
+                        />
+                        <TextArea
+                          label="Structured data JSON"
+                          value={translation.structuredDataJson}
+                          minRows={6}
+                          onChange={(value) =>
+                            updateTranslation(
+                              locale,
+                              'structuredDataJson',
                               value,
                               setEditor,
                             )
@@ -549,6 +586,16 @@ export function PageManager() {
             </div>
           </form>
         </div>
+
+        <VersionPanel<PageItem>
+          endpoint="/pages"
+          entityId={editor.id}
+          onRestored={async (restored) => {
+            setEditor(pageToEditor(restored));
+            await loadPages();
+            setMessage('Sayfa versiyondan geri alındı.');
+          }}
+        />
       </div>
     </ProtectedAdmin>
   );
@@ -558,6 +605,7 @@ function createEmptyEditor(): EditorState {
   return {
     blocks: [createEditorBlock(0)],
     pageType: 'STANDARD',
+    scheduledAt: '',
     status: 'DRAFT',
     translations: {
       EN: createEmptyTranslation(),
@@ -574,6 +622,7 @@ function createEmptyTranslation(): EditorTranslation {
     seoDescription: '',
     seoTitle: '',
     slug: '',
+    structuredDataJson: '',
     summary: '',
     title: '',
   };
@@ -605,6 +654,11 @@ function pageToEditor(page: PageItem): EditorState {
       seoDescription: translation.seoDescription ?? '',
       seoTitle: translation.seoTitle ?? '',
       slug: translation.slug ?? '',
+      structuredDataJson:
+        JSON.stringify(translation.structuredDataJson ?? null, null, 2) ===
+        'null'
+          ? ''
+          : JSON.stringify(translation.structuredDataJson, null, 2),
       summary: translation.summary ?? '',
       title: translation.title ?? '',
     };
@@ -622,6 +676,7 @@ function pageToEditor(page: PageItem): EditorState {
         : [createEditorBlock(0)],
     id: page.id,
     pageType: page.pageType,
+    scheduledAt: toDateTimeLocal(page.scheduledAt),
     status: page.status,
     translations,
   };
@@ -642,7 +697,7 @@ function buildPayload(editor: EditorState): PagePayload {
       throw new Error(`${locale} için title ve slug birlikte doldurulmalı.`);
     }
 
-    translations.push({
+    const payloadTranslation: PagePayload['translations'][number] = {
       canonicalUrl: optionalString(translation.canonicalUrl),
       locale,
       robotsFollow: translation.robotsFollow,
@@ -652,7 +707,19 @@ function buildPayload(editor: EditorState): PagePayload {
       slug: translation.slug.trim(),
       summary: optionalString(translation.summary),
       title: translation.title.trim(),
-    });
+    };
+
+    if (translation.structuredDataJson.trim()) {
+      try {
+        payloadTranslation.structuredDataJson = JSON.parse(
+          translation.structuredDataJson,
+        );
+      } catch {
+        throw new Error(`${locale} structured data JSON formatı geçersiz.`);
+      }
+    }
+
+    translations.push(payloadTranslation);
   }
 
   if (translations.length === 0) {
@@ -682,6 +749,7 @@ function buildPayload(editor: EditorState): PagePayload {
   return {
     blocks,
     pageType: editor.pageType,
+    scheduledAt: scheduledAtPayload(editor),
     status: editor.status,
     translations,
   };
@@ -689,6 +757,30 @@ function buildPayload(editor: EditorState): PagePayload {
 
 function optionalString(value: string) {
   return value.trim() || undefined;
+}
+
+function scheduledAtPayload(editor: EditorState) {
+  if (editor.status !== 'SCHEDULED') {
+    return null;
+  }
+
+  if (!editor.scheduledAt) {
+    throw new Error('Zamanlanmış yayın için tarih zorunlu.');
+  }
+
+  return new Date(editor.scheduledAt).toISOString();
+}
+
+function toDateTimeLocal(value?: string | null) {
+  if (!value) return '';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toISOString().slice(0, 16);
 }
 
 function getPrimaryTranslation(page: PageItem) {

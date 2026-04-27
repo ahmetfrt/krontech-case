@@ -2,12 +2,27 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBlogPostDto } from './dto/create-blog-post.dto';
 import { UpdateBlogPostDto } from './dto/update-blog-post.dto';
-import { Prisma, PublishStatus } from '@prisma/client';
+import { Locale, Prisma, PublishStatus } from '@prisma/client';
 import { VersionsService } from '../versions/versions.service';
 import { CacheService } from '../cache/cache.service';
 import { RevalidateService } from '../revalidate/revalidate.service';
 import { MediaService } from '../media/media.service';
 import { AuditService } from '../audit/audit.service';
+import {
+  createPublishingFields,
+  updatePublishingFields,
+} from '../publishing/publishing-fields';
+import {
+  asSnapshotRecord,
+  snapshotArray,
+  snapshotBoolean,
+  snapshotDate,
+  snapshotJson,
+  snapshotLocale,
+  snapshotNullableString,
+  snapshotStatus,
+  snapshotString,
+} from '../versions/version-snapshot';
 
 
 @Injectable()
@@ -24,11 +39,16 @@ export class BlogService {
   async create(dto: CreateBlogPostDto, userId?: string) {
     const post = await this.prisma.blogPost.create({
       data: {
-        status: dto.status ?? PublishStatus.DRAFT,
+        ...createPublishingFields({
+          status: dto.status,
+          scheduledAt: dto.scheduledAt,
+        }),
         authorName: dto.authorName,
         featuredImageId: dto.featuredImageId,
         translations: {
-          create: dto.translations,
+          create: dto.translations.map((translation) =>
+            this.toTranslationCreateInput(translation),
+          ),
         },
       },
       include: {
@@ -99,13 +119,18 @@ export class BlogService {
     const updated = await this.prisma.blogPost.update({
       where: { id },
       data: {
-        status: dto.status,
+        ...updatePublishingFields({
+          status: dto.status,
+          scheduledAt: dto.scheduledAt,
+        }),
         authorName: dto.authorName,
         featuredImageId:
           dto.featuredImageId === undefined ? undefined : dto.featuredImageId,
         translations: dto.translations
           ? {
-              create: dto.translations,
+              create: dto.translations.map((translation) =>
+                this.toTranslationCreateInput(translation),
+              ),
             }
           : undefined,
       },
@@ -174,12 +199,13 @@ export class BlogService {
   }
 
   async findPublishedList(locale: string) {
+    const apiLocale = this.toLocale(locale);
     const posts = await this.prisma.blogPost.findMany({
       where: {
         status: PublishStatus.PUBLISHED,
         translations: {
           some: {
-            locale: locale as any,
+            locale: apiLocale,
           },
         },
       },
@@ -194,7 +220,8 @@ export class BlogService {
   }
 
   async findPublishedByLocaleAndSlug(locale: string, slug: string) {
-    const cacheKey = `blog:${locale}:${slug}`;
+    const apiLocale = this.toLocale(locale);
+    const cacheKey = `blog:${apiLocale}:${slug}`;
     const cached = await this.cacheService.get(cacheKey);
 
     if (cached) {
@@ -206,7 +233,7 @@ export class BlogService {
         status: PublishStatus.PUBLISHED,
         translations: {
           some: {
-            locale: locale as any,
+            locale: apiLocale,
             slug,
           },
         },
@@ -237,7 +264,7 @@ export class BlogService {
     await this.findOne(id);
 
     const version = await this.versionsService.getVersion(versionId);
-    const snapshot = version.snapshotJson as any;
+    const snapshot = asSnapshotRecord(version.snapshotJson);
 
     await this.prisma.blogPostTranslation.deleteMany({
       where: { blogPostId: id },
@@ -246,23 +273,26 @@ export class BlogService {
     const restored = await this.prisma.blogPost.update({
       where: { id },
       data: {
-        status: snapshot.status,
-        authorName: snapshot.authorName,
-        featuredImageId: snapshot.featuredImageId ?? null,
-        publishedAt: snapshot.publishedAt ? new Date(snapshot.publishedAt) : null,
-        scheduledAt: snapshot.scheduledAt ? new Date(snapshot.scheduledAt) : null,
+        status: snapshotStatus(snapshot.status),
+        authorName: snapshotNullableString(snapshot.authorName),
+        featuredImageId: snapshotNullableString(snapshot.featuredImageId),
+        publishedAt: snapshotDate(snapshot.publishedAt),
+        scheduledAt: snapshotDate(snapshot.scheduledAt),
         translations: {
-          create: (snapshot.translations || []).map((t: any) => ({
-            locale: t.locale,
-            title: t.title,
-            slug: t.slug,
-            excerpt: t.excerpt,
-            content: t.content,
-            seoTitle: t.seoTitle,
-            seoDescription: t.seoDescription,
-            ogTitle: t.ogTitle,
-            ogDescription: t.ogDescription,
-            canonicalUrl: t.canonicalUrl,
+          create: snapshotArray(snapshot.translations).map((t) => ({
+            locale: snapshotLocale(t.locale),
+            title: snapshotString(t.title) ?? '',
+            slug: snapshotString(t.slug) ?? '',
+            excerpt: snapshotString(t.excerpt),
+            content: snapshotString(t.content),
+            seoTitle: snapshotString(t.seoTitle),
+            seoDescription: snapshotString(t.seoDescription),
+            ogTitle: snapshotString(t.ogTitle),
+            ogDescription: snapshotString(t.ogDescription),
+            canonicalUrl: snapshotString(t.canonicalUrl),
+            robotsIndex: snapshotBoolean(t.robotsIndex),
+            robotsFollow: snapshotBoolean(t.robotsFollow),
+            structuredDataJson: snapshotJson(t.structuredDataJson),
           })),
         },
       },
@@ -292,6 +322,19 @@ export class BlogService {
     return {
       ...post,
       featuredImage: this.mediaService.withPublicUrl(post.featuredImage),
+    };
+  }
+
+  private toLocale(locale: string) {
+    return locale.toUpperCase() === 'EN' ? Locale.EN : Locale.TR;
+  }
+
+  private toTranslationCreateInput(
+    translation: CreateBlogPostDto['translations'][number],
+  ) {
+    return {
+      ...translation,
+      structuredDataJson: snapshotJson(translation.structuredDataJson),
     };
   }
 }

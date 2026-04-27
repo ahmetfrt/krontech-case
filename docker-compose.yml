@@ -4,36 +4,97 @@ services:
     container_name: krontech-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: krontech
-      POSTGRES_USER: krontech
-      POSTGRES_PASSWORD: krontech
+      POSTGRES_DB: ${POSTGRES_DB:-krontech}
+      POSTGRES_USER: ${POSTGRES_USER:-krontech}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-krontech}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-krontech} -d ${POSTGRES_DB:-krontech}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   redis:
     image: redis:7
     container_name: krontech-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   minio:
     image: minio/minio:latest
     container_name: krontech-minio
     restart: unless-stopped
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+
+  api:
+    build:
+      context: ./apps/api
+    container_name: krontech-api
+    restart: unless-stopped
+    environment:
+      API_PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-krontech}:${POSTGRES_PASSWORD:-krontech}@postgres:5432/${POSTGRES_DB:-krontech}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change_this_in_real_project}
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-krontech-media}
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000/krontech-media}
+      MINIO_USE_SSL: "false"
+      NEXT_REVALIDATE_BASE_URL: http://web:3000
+      NEXT_REVALIDATE_SECRET: ${NEXT_REVALIDATE_SECRET:-local_revalidate_secret}
+    ports:
+      - "${API_PORT:-3001}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        API_INTERNAL_URL: http://api:3001
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+        NEXT_REVALIDATE_SECRET: ${NEXT_REVALIDATE_SECRET:-local_revalidate_secret}
+    container_name: krontech-web
+    restart: unless-stopped
+    environment:
+      WEB_PORT: 3000
+      API_INTERNAL_URL: http://api:3001
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      NEXT_REVALIDATE_SECRET: ${NEXT_REVALIDATE_SECRET:-local_revalidate_secret}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_started
 
 volumes:
   postgres_data:
